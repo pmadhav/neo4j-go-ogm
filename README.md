@@ -59,7 +59,9 @@ Relationships must be a pointer to a `struct` as can be seen in the `Movie`-`Dir
 		"username",
 		"password",
 		gogm.NONE, /*log level*/
-		false /*allow cyclic ref*/}
+		false /*allow cyclic ref*/
+		false /*turn on/off TLS encryption*/
+	}
 
 	var ogm = gogm.New(config)
 	var session, err = ogm.NewSession(true)
