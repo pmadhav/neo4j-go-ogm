@@ -29,4 +29,5 @@ type Config struct {
 	Password       string
 	LogLevel       LogLevel
 	AllowCyclicRef bool
+	Encrypted      bool
 }
