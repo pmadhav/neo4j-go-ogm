@@ -1,4 +1,6 @@
-# Neo4j-go-ogm - A Neo4j Object Graph Mapping Library for Golang runtime
+# Neo4j-go-ogm
+
+A Neo4j Object Graph Mapping Library for Golang runtime
 
 The main goal of Neo4j-go-ogm is to get developers up and running quickly without writing unnecessary boiler plate code. Using Go Tags, Go runtime `structs` can be annotated and mapped to Neo4j domain entities. This project was hugely inspired by the Java version of Neo4j OGM.
 
