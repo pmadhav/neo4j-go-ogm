@@ -6,15 +6,13 @@ This quick start is based on a simple application [here](https://github.com/nick
 
 ## Quick start
 
-```
-go get -u github.com/nick92/neo4j-go-ogm
-```
+`go get -u github.com/nick92/neo4j-go-ogm`
 
 ### Set up domain entities
 
 The setup below declares 3 node entities (`Actor`, `Movie`, `Director`) and 1 relelationship entity (`Character`) which relates an `Actor` to a `Movie`. 
 
-```
+```go
 type Movie struct {
 	gogm.Node `gogm:"label:FILM,label:PICTURE"`
 
@@ -53,8 +51,7 @@ Relationships must be a pointer to a `struct` as can be seen in the `Movie`-`Dir
 
 ### Persist/Load entities
 
-```
-
+```go
 	var config = &gogm.Config{
 		"uri",
 		"username",
