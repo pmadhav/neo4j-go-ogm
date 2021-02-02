@@ -29,8 +29,8 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 
-	gogm "github.com/codingfinest/neo4j-go-ogm"
-	. "github.com/codingfinest/neo4j-go-ogm/tests/models"
+	gogm "github.com/nick92/neo4j-go-ogm"
+	. "github.com/nick92/neo4j-go-ogm/tests/models"
 	. "github.com/onsi/gomega"
 )
 
@@ -39,7 +39,9 @@ var config = &gogm.Config{
 	"neo4j",
 	"Pass1234",
 	gogm.DEBUG,
-	true}
+	true, 
+	false
+}
 
 var ogm = gogm.New(config)
 var session, err = ogm.NewSession(true)

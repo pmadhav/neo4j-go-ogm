@@ -25,8 +25,8 @@ package models
 import (
 	"time"
 
-	gogm "github.com/codingfinest/neo4j-go-ogm"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
+	gogm "github.com/nick92/neo4j-go-ogm"
 )
 
 type TestNodeEntity struct {

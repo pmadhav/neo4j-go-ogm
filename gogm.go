@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2021 nick92
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -107,7 +107,8 @@ type Gogm struct {
 func New(config *Config) *Gogm {
 	return &Gogm{
 		config,
-		nil}
+		nil,
+	}
 }
 
 //NewSession creates a new session on an OGM instance
@@ -120,7 +121,7 @@ func (g *Gogm) NewSession(isWriteMode bool) (Session, error) {
 	}
 
 	if g.driver == nil {
-		if g.driver, err = getDriver(g.config.URI, g.config.Username, g.config.Password, g.config.LogLevel); err != nil {
+		if g.driver, err = g.config.getDriver(); err != nil {
 			return nil, err
 		}
 	}
@@ -149,16 +150,17 @@ func (g *Gogm) NewSession(isWriteMode bool) (Session, error) {
 		eventer}, nil
 }
 
-func getDriver(uri string, username string, password string, logLevel LogLevel) (neo4j.Driver, error) {
+func (conf *Config) getDriver() (neo4j.Driver, error) {
 	var (
 		err    error
 		driver neo4j.Driver
 	)
 
-	if driver, err = neo4j.NewDriver(uri, neo4j.BasicAuth(username, password, ""), func(config *neo4j.Config) {
-		if logLevel != NONE {
-			config.Log = neo4j.ConsoleLogger(logLevels[logLevel])
+	if driver, err = neo4j.NewDriver(conf.URI, neo4j.BasicAuth(conf.Username, conf.Password, ""), func(config *neo4j.Config) {
+		if conf.LogLevel != NONE {
+			config.Log = neo4j.ConsoleLogger(logLevels[conf.LogLevel])
 		}
+		config.Encrypted = conf.Encrypted
 	}); err != nil {
 		return nil, err
 	}
