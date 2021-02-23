@@ -104,22 +104,23 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 				}
 			}
 
-			savedDepth := savedDepths[g.getCoordinate().graphIndex]
-			if savedDepth >= 0 {
-				if g.getCoordinate().depth == 0 {
-					g.setDepth(&savedDepth)
-				}
-				saveLifecycle := UPDATE
-				if createdGraphSignatures[g.getSignature()] {
-					saveLifecycle = CREATE
-				}
-				store.save(g)
-				if g.getValue().IsValid() {
-					for _, eventListener := range s.eventer.eventListeners {
-						eventListener.OnPostSave(event{g.getValue(), saveLifecycle})
+			if g.getCoordinate() != nil {
+				savedDepth := savedDepths[g.getCoordinate().graphIndex]
+				if savedDepth >= 0 {
+					if g.getCoordinate().depth == 0 {
+						g.setDepth(&savedDepth)
+					}
+					saveLifecycle := UPDATE
+					if createdGraphSignatures[g.getSignature()] {
+						saveLifecycle = CREATE
+					}
+					store.save(g)
+					if g.getValue().IsValid() {
+						for _, eventListener := range s.eventer.eventListeners {
+							eventListener.OnPostSave(event{g.getValue(), saveLifecycle})
+						}
 					}
 				}
-
 			}
 		}
 	}

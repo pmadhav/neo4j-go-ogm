@@ -39,8 +39,8 @@ var config = &gogm.Config{
 	"neo4j",
 	"Pass1234",
 	gogm.DEBUG,
-	true, 
-	false
+	true,
+	false,
 }
 
 var ogm = gogm.New(config)
