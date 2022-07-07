@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,5 +29,4 @@ type Config struct {
 	Password       string
 	LogLevel       LogLevel
 	AllowCyclicRef bool
-	Encrypted      bool
 }

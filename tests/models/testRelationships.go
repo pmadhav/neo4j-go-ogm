@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
 
 package models
 
-import gogm "github.com/nick92/neo4j-go-ogm"
+import gogm "github.com/pmadhav/neo4j-go-ogm"
 
 type TestRelationshipEntity struct {
 	gogm.Relationship

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,8 @@ package models
 import (
 	"time"
 
-	"github.com/neo4j/neo4j-go-driver/neo4j"
-	gogm "github.com/nick92/neo4j-go-ogm"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	gogm "github.com/pmadhav/neo4j-go-ogm"
 )
 
 type TestNodeEntity struct {

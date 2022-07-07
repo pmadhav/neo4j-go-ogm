@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2021 nick92
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ import (
 	"math"
 	"reflect"
 
-	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 const (
@@ -160,7 +160,6 @@ func (conf *Config) getDriver() (neo4j.Driver, error) {
 		if conf.LogLevel != NONE {
 			config.Log = neo4j.ConsoleLogger(logLevels[conf.LogLevel])
 		}
-		config.Encrypted = conf.Encrypted
 	}); err != nil {
 		return nil, err
 	}

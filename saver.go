@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 type saver struct {
@@ -45,7 +45,7 @@ func newSaver(cypherExecuter *cypherExecuter, store store, eventer eventer, regi
 func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 	var (
 		graphs        []graph
-		record        neo4j.Record
+		record        *neo4j.Record
 		savedGraphs   map[string]graph
 		deletedGraphs map[string]graph
 		err           error
@@ -72,8 +72,8 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 
 	if record != nil {
 		createdGraphSignatures := map[string]bool{}
-		for index, key := range record.Keys() {
-			properties := record.GetByIndex(index).(map[string]interface{})
+		for index, key := range record.Keys {
+			properties := record.Values[index].(map[string]interface{})
 
 			//New graphs have negative IDs. Update the local graphs with database generated IDs
 			if savedGraphs[key] != nil && savedGraphs[key].getID() < 0 {
@@ -128,11 +128,11 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 	return err
 }
 
-func (s *saver) persist(graphs []graph, saveOptions *SaveOptions) ([]int, neo4j.Record, map[string]graph, map[string]graph, error) {
+func (s *saver) persist(graphs []graph, saveOptions *SaveOptions) ([]int, *neo4j.Record, map[string]graph, map[string]graph, error) {
 
 	var (
 		err    error
-		record neo4j.Record
+		record *neo4j.Record
 		params map[string]interface{}
 
 		loadedGraphs = newstore(nil)
@@ -205,7 +205,7 @@ func (s *saver) persist(graphs []graph, saveOptions *SaveOptions) ([]int, neo4j.
 	cypher += _return
 
 	if cypher != emptyString {
-		var records []neo4j.Record
+		var records []*neo4j.Record
 		if records, err = neo4j.Collect(s.cypherExecuter.exec(cypher, grandParams)); err != nil {
 			return savedDepths, nil, nil, nil, err
 		}

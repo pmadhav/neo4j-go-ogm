@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ import (
 	"sort"
 	"time"
 
-	gogm "github.com/nick92/neo4j-go-ogm"
+	gogm "github.com/pmadhav/neo4j-go-ogm"
 )
 
 type TestEventListener struct{}
