@@ -28,8 +28,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-
-	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 type registry struct {
@@ -66,15 +64,8 @@ func (r *registry) get(t reflect.Type) (metadata, error) {
 		}
 		r.registered[reflect.TypeOf(m)][m.getStructLabel()] = m
 		for _, statement := range getCreateSchemaStatement(m) {
-			var session neo4j.Session
-			if _, session, err = r.cypherExecuter.exec(statement, nil); err != nil {
-				if session != nil {
-					defer session.Close()
-				}
+			if _, err = r.cypherExecuter.exec(statement, nil, false, false); err != nil {
 				return nil, err
-			}
-			if session != nil {
-				defer session.Close()
 			}
 		}
 

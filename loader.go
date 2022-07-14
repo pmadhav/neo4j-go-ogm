@@ -235,11 +235,7 @@ func (l *loader) loadAllOfGraphType(refGraph graph, IDs interface{}, loadOptions
 		return invalidValue, nil, err
 	}
 
-	result, session, execErr := l.cypherExecuter.exec(cypherBuilder.getLoadAll(ids, loadOptions))
-	if session != nil {
-		defer session.Close()
-	}
-	if records, err = neo4j.Collect(result, execErr); err != nil {
+	if records, err = l.cypherExecuter.collect(cypherBuilder.getLoadAll(ids, loadOptions)); err != nil {
 		return invalidValue, nil, err
 	}
 

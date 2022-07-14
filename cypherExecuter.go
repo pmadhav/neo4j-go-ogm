@@ -24,6 +24,7 @@ package gogm
 
 import (
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j/db"
 )
 
 type transactionExecuter func(work neo4j.TransactionWork, configurers ...func(*neo4j.TransactionConfig)) (interface{}, error)
@@ -56,25 +57,66 @@ func (c *cypherExecuter) execTransaction(te transactionExecuter, cql string, par
 	return result, nil
 }
 
-// In Neo4j go driver > 1.8, we cannot close the session
-// until the data has been read. For this reason, we return
-// the session object back so that we can call `Close` on
-// it after the data has been read.
-func (c *cypherExecuter) exec(cql string, params map[string]interface{}) (neo4j.Result, neo4j.Session, error) {
+func (c *cypherExecuter) execTransactionCollect(te transactionExecuter, cql string, params map[string]interface{}) (interface{}, error) {
 	var (
-		result  neo4j.Result
-		session neo4j.Session
 		err     error
+		result  neo4j.Result
+		records interface{}
+	)
+
+	if records, err = te(func(tx neo4j.Transaction) (interface{}, error) {
+		if result, err = tx.Run(cql, params); err != nil {
+			return nil, err
+		}
+		return result.Collect()
+	}); err != nil {
+		return nil, err
+	}
+
+	return records, nil
+}
+
+func (c *cypherExecuter) execTransactionSingle(te transactionExecuter, cql string, params map[string]interface{}) (interface{}, error) {
+	var (
+		err    error
+		result neo4j.Result
+		record interface{}
+	)
+
+	if _, err = te(func(tx neo4j.Transaction) (interface{}, error) {
+		if result, err = tx.Run(cql, params); err != nil {
+			return nil, err
+		}
+		return result.Single()
+	}); err != nil {
+		return nil, err
+	}
+
+	return record, nil
+}
+
+func (c *cypherExecuter) exec(cql string, params map[string]interface{}, single bool, collect bool) (interface{}, error) {
+	var (
+		result   interface{}
+		txResult neo4j.Result
+		session  neo4j.Session
+		err      error
 	)
 	if c.transaction != nil {
-		if result, err = c.transaction.run(cql, params); err != nil {
-			return nil, nil, err
+		if txResult, err = c.transaction.run(cql, params); err != nil {
+			return nil, err
 		}
-		return result, nil, nil
+
+		if single {
+			return txResult.Single()
+		} else if collect {
+			return txResult.Collect()
+		}
+		return txResult, nil
 	}
 
 	if session, err = c.driver.Session(c.accessMode); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	transactionMode := session.ReadTransaction
@@ -82,8 +124,24 @@ func (c *cypherExecuter) exec(cql string, params map[string]interface{}) (neo4j.
 		transactionMode = session.WriteTransaction
 	}
 
-	result, err = c.execTransaction(transactionMode, cql, params)
-	return result, session, err
+	if single {
+		result, err = c.execTransactionSingle(transactionMode, cql, params)
+	} else if collect {
+		result, err = c.execTransactionCollect(transactionMode, cql, params)
+	} else {
+		result, err = c.execTransaction(transactionMode, cql, params)
+	}
+	return result, err
+}
+
+func (c *cypherExecuter) single(cql string, params map[string]interface{}) (*db.Record, error) {
+	record, err := c.exec(cql, params, true, false)
+	return record.(*db.Record), err
+}
+
+func (c *cypherExecuter) collect(cql string, params map[string]interface{}) ([]*db.Record, error) {
+	record, err := c.exec(cql, params, false, true)
+	return record.([]*db.Record), err
 }
 
 func (c *cypherExecuter) setTransaction(transaction *transaction) {

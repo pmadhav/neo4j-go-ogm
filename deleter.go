@@ -104,11 +104,7 @@ func (d *deleter) delete(object interface{}) error {
 			}
 		}
 
-		result, session, execErr := d.cypherExecuter.exec(cypher, flattenParamters(parameters))
-		if session != nil {
-			defer session.Close()
-		}
-		if record, err = neo4j.Single(result, execErr); err != nil {
+		if record, err = d.cypherExecuter.single(cypher, flattenParamters(parameters)); err != nil {
 			return err
 		}
 		if record != nil {
@@ -144,11 +140,7 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 	cypher, parameter := cypherBuilder.getDeleteAll()
 
 	if cypher != emptyString {
-		result, session, execErr := d.cypherExecuter.exec(cypher, parameter)
-		if session != nil {
-			defer session.Close()
-		}
-		if records, err = neo4j.Collect(result, execErr); err != nil {
+		if records, err = d.cypherExecuter.collect(cypher, parameter); err != nil {
 			return err
 		}
 		for _, record := range records {
@@ -169,7 +161,7 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 func (d *deleter) purgeDatabase() error {
 	var err error
 	var session neo4j.Session
-	if _, session, err = d.cypherExecuter.exec("MATCH (n) DETACH DELETE n", nil); err != nil {
+	if _, err = d.cypherExecuter.exec("MATCH (n) DETACH DELETE n", nil, false, false); err != nil {
 		return err
 	}
 	if session != nil {

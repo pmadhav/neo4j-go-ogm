@@ -58,11 +58,7 @@ func (q *queryer) queryForObject(object interface{}, cypher string, parameters m
 	if label, err = metadata.getLabel(invalidValue); err != nil {
 		return err
 	}
-	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
-	if session != nil {
-		defer session.Close()
-	}
-	if records, err = neo4j.Collect(result, execErr); err != nil {
+	if records, err = q.cypherExecuter.collect(cypher, parameters); err != nil {
 		return err
 	}
 
@@ -101,11 +97,7 @@ func (q *queryer) queryForObjects(objects interface{}, cypher string, parameters
 		return err
 	}
 
-	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
-	if session != nil {
-		defer session.Close()
-	}
-	if records, err = neo4j.Collect(result, execErr); err != nil {
+	if records, err = q.cypherExecuter.collect(cypher, parameters); err != nil {
 		return err
 	}
 
@@ -125,11 +117,7 @@ func (q *queryer) query(cypher string, parameters map[string]interface{}, object
 		}
 	}
 
-	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
-	if session != nil {
-		defer session.Close()
-	}
-	records, err := neo4j.Collect(result, execErr)
+	records, err := q.cypherExecuter.collect(cypher, parameters)
 	if err != nil {
 		return nil, err
 	}
@@ -302,11 +290,7 @@ func (q *queryer) countEntitiesOfType(object interface{}) (int64, error) {
 	cypher, parameters = cypherBuilder.getCountEntitiesOfType()
 
 	if cypher != emptyString {
-		result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
-		if session != nil {
-			defer session.Close()
-		}
-		if record, err = neo4j.Single(result, execErr); err != nil {
+		if record, err = q.cypherExecuter.single(cypher, parameters); err != nil {
 			return -1, err
 		}
 		if record != nil {
@@ -322,11 +306,7 @@ func (q *queryer) count(cypher string, parameters map[string]interface{}) (int64
 		record *neo4j.Record
 		err    error
 	)
-	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
-	if session != nil {
-		defer session.Close()
-	}
-	if record, err = neo4j.Single(result, execErr); err != nil {
+	if record, err = q.cypherExecuter.single(cypher, parameters); err != nil {
 		return -1, err
 	}
 	return record.Values[0].(int64), nil
