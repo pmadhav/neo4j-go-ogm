@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -104,7 +104,11 @@ func (d *deleter) delete(object interface{}) error {
 			}
 		}
 
-		if record, err = neo4j.Single(d.cypherExecuter.exec(cypher, flattenParamters(parameters))); err != nil {
+		result, session, execErr := d.cypherExecuter.exec(cypher, flattenParamters(parameters))
+		if session != nil {
+			defer session.Close()
+		}
+		if record, err = neo4j.Single(result, execErr); err != nil {
 			return err
 		}
 		if record != nil {
@@ -140,7 +144,11 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 	cypher, parameter := cypherBuilder.getDeleteAll()
 
 	if cypher != emptyString {
-		if records, err = neo4j.Collect(d.cypherExecuter.exec(cypher, parameter)); err != nil {
+		result, session, execErr := d.cypherExecuter.exec(cypher, parameter)
+		if session != nil {
+			defer session.Close()
+		}
+		if records, err = neo4j.Collect(result, execErr); err != nil {
 			return err
 		}
 		for _, record := range records {
@@ -160,8 +168,12 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 
 func (d *deleter) purgeDatabase() error {
 	var err error
-	if _, err := d.cypherExecuter.exec("MATCH (n) DETACH DELETE n", nil); err != nil {
+	var session neo4j.Session
+	if _, session, err = d.cypherExecuter.exec("MATCH (n) DETACH DELETE n", nil); err != nil {
 		return err
+	}
+	if session != nil {
+		defer session.Close()
 	}
 	for _, deletedGraph := range d.store.purge() {
 		notifyPostDelete(d.eventer, deletedGraph, DELETE)

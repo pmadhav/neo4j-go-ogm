@@ -206,7 +206,11 @@ func (s *saver) persist(graphs []graph, saveOptions *SaveOptions) ([]int, *neo4j
 
 	if cypher != emptyString {
 		var records []*neo4j.Record
-		if records, err = neo4j.Collect(s.cypherExecuter.exec(cypher, grandParams)); err != nil {
+		result, session, execErr := s.cypherExecuter.exec(cypher, grandParams)
+		if session != nil {
+			defer session.Close()
+		}
+		if records, err = neo4j.Collect(result, execErr); err != nil {
 			return savedDepths, nil, nil, nil, err
 		}
 		record = records[0]

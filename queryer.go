@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 pmadhav
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,11 @@ func (q *queryer) queryForObject(object interface{}, cypher string, parameters m
 	if label, err = metadata.getLabel(invalidValue); err != nil {
 		return err
 	}
-	if records, err = neo4j.Collect(q.cypherExecuter.exec(cypher, parameters)); err != nil {
+	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
+	if session != nil {
+		defer session.Close()
+	}
+	if records, err = neo4j.Collect(result, execErr); err != nil {
 		return err
 	}
 
@@ -97,7 +101,11 @@ func (q *queryer) queryForObjects(objects interface{}, cypher string, parameters
 		return err
 	}
 
-	if records, err = neo4j.Collect(q.cypherExecuter.exec(cypher, parameters)); err != nil {
+	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
+	if session != nil {
+		defer session.Close()
+	}
+	if records, err = neo4j.Collect(result, execErr); err != nil {
 		return err
 	}
 
@@ -117,7 +125,11 @@ func (q *queryer) query(cypher string, parameters map[string]interface{}, object
 		}
 	}
 
-	records, err := neo4j.Collect(q.cypherExecuter.exec(cypher, parameters))
+	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
+	if session != nil {
+		defer session.Close()
+	}
+	records, err := neo4j.Collect(result, execErr)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +302,11 @@ func (q *queryer) countEntitiesOfType(object interface{}) (int64, error) {
 	cypher, parameters = cypherBuilder.getCountEntitiesOfType()
 
 	if cypher != emptyString {
-		if record, err = neo4j.Single(q.cypherExecuter.exec(cypher, parameters)); err != nil {
+		result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
+		if session != nil {
+			defer session.Close()
+		}
+		if record, err = neo4j.Single(result, execErr); err != nil {
 			return -1, err
 		}
 		if record != nil {
@@ -306,7 +322,11 @@ func (q *queryer) count(cypher string, parameters map[string]interface{}) (int64
 		record *neo4j.Record
 		err    error
 	)
-	if record, err = neo4j.Single(q.cypherExecuter.exec(cypher, parameters)); err != nil {
+	result, session, execErr := q.cypherExecuter.exec(cypher, parameters)
+	if session != nil {
+		defer session.Close()
+	}
+	if record, err = neo4j.Single(result, execErr); err != nil {
 		return -1, err
 	}
 	return record.Values[0].(int64), nil

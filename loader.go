@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 pmadhav
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -235,7 +235,11 @@ func (l *loader) loadAllOfGraphType(refGraph graph, IDs interface{}, loadOptions
 		return invalidValue, nil, err
 	}
 
-	if records, err = neo4j.Collect(l.cypherExecuter.exec(cypherBuilder.getLoadAll(ids, loadOptions))); err != nil {
+	result, session, execErr := l.cypherExecuter.exec(cypherBuilder.getLoadAll(ids, loadOptions))
+	if session != nil {
+		defer session.Close()
+	}
+	if records, err = neo4j.Collect(result, execErr); err != nil {
 		return invalidValue, nil, err
 	}
 

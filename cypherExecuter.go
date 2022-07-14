@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -56,7 +56,11 @@ func (c *cypherExecuter) execTransaction(te transactionExecuter, cql string, par
 	return result, nil
 }
 
-func (c *cypherExecuter) exec(cql string, params map[string]interface{}) (neo4j.Result, error) {
+// In Neo4j go driver > 1.8, we cannot close the session
+// until the data has been read. For this reason, we return
+// the session object back so that we can call `Close` on
+// it after the data has been read.
+func (c *cypherExecuter) exec(cql string, params map[string]interface{}) (neo4j.Result, neo4j.Session, error) {
 	var (
 		result  neo4j.Result
 		session neo4j.Session
@@ -64,22 +68,22 @@ func (c *cypherExecuter) exec(cql string, params map[string]interface{}) (neo4j.
 	)
 	if c.transaction != nil {
 		if result, err = c.transaction.run(cql, params); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return result, nil
+		return result, nil, nil
 	}
 
 	if session, err = c.driver.Session(c.accessMode); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer session.Close()
 
 	transactionMode := session.ReadTransaction
 	if c.accessMode == neo4j.AccessModeWrite {
 		transactionMode = session.WriteTransaction
 	}
 
-	return c.execTransaction(transactionMode, cql, params)
+	result, err = c.execTransaction(transactionMode, cql, params)
+	return result, session, err
 }
 
 func (c *cypherExecuter) setTransaction(transaction *transaction) {

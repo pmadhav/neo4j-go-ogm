@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2020 codingfinest
+// Copyright (c) 2022 pmadhav
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,8 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 type registry struct {
@@ -64,8 +66,15 @@ func (r *registry) get(t reflect.Type) (metadata, error) {
 		}
 		r.registered[reflect.TypeOf(m)][m.getStructLabel()] = m
 		for _, statement := range getCreateSchemaStatement(m) {
-			if _, err = r.cypherExecuter.exec(statement, nil); err != nil {
+			var session neo4j.Session
+			if _, session, err = r.cypherExecuter.exec(statement, nil); err != nil {
+				if session != nil {
+					defer session.Close()
+				}
 				return nil, err
+			}
+			if session != nil {
+				defer session.Close()
 			}
 		}
 
