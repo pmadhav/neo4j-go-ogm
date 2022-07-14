@@ -40,11 +40,10 @@ var config = &gogm.Config{
 	"Pass1234",
 	gogm.DEBUG,
 	true,
-	false,
 }
 
 var ogm = gogm.New(config)
-var session, err = ogm.NewSession(true)
+var session, _ = ogm.NewSession(true)
 
 const deletedID int64 = -1
 
@@ -467,7 +466,7 @@ func TestDeleteAllRelationships(t *testing.T) {
 	countOfSimpleRelationships, err := session.CountEntitiesOfType(&simpleRelationshipRef)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(session.DeleteAll(&simpleRelationshipRef, nil)).NotTo(HaveOccurred())
-	countOfSimpleRelationshipsPostDelete, err := session.CountEntitiesOfType(&simpleRelationshipRef)
+	countOfSimpleRelationshipsPostDelete, _ := session.CountEntitiesOfType(&simpleRelationshipRef)
 
 	g.Expect(countOfSimpleRelationships).To(Equal(int64(2)))
 	g.Expect(countOfSimpleRelationshipsPostDelete).To(BeZero())

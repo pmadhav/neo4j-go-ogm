@@ -41,7 +41,7 @@ func newTransactioner(accessMode neo4j.AccessMode) *transactioner {
 
 func (t *transactioner) beginTransaction(s *sessionImpl) (*transaction, error) {
 	if t.transaction != nil {
-		return nil, errors.New("Transaction already exists")
+		return nil, errors.New("transaction already exists")
 	}
 
 	var err error
@@ -59,7 +59,7 @@ func (t *transactioner) endTransaction(s *sessionImpl) func() error {
 	return func() error {
 		var err error
 		if t.transaction == nil {
-			return errors.New("No transaction exist")
+			return errors.New("no transaction exist")
 		}
 		if err = t.transaction.neo4jTransaction.Close(); err != nil {
 			return err

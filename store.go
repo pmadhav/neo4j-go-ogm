@@ -83,7 +83,6 @@ func (s *storeImpl) get(g graph) graph {
 		s.nodesMu.Lock()
 		defer s.nodesMu.Unlock()
 		storedGraph = s.nodes[g.getID()]
-		break
 	case typeOfPrivateRelationship:
 		internalID := g.getID()
 		if g.getValue() != nil && !g.getValue().IsValid() {
@@ -98,7 +97,6 @@ func (s *storeImpl) get(g graph) graph {
 			}
 		}
 		storedGraph = s.relationships[internalID]
-		break
 	}
 	return storedGraph
 }
@@ -109,7 +107,6 @@ func (s *storeImpl) save(g graph) {
 		s.nodesMu.Lock()
 		defer s.nodesMu.Unlock()
 		s.nodes[g.getID()] = g
-		break
 	case typeOfPrivateRelationship:
 		s.relationships[g.getID()] = g
 		if g.getValue() != nil && !g.getValue().IsValid() {
@@ -120,7 +117,6 @@ func (s *storeImpl) save(g graph) {
 			internalID := g.getID()
 			s.relationshipsA[relatedGraphs[startNode].getID()][relatedGraphs[endNode].getID()] = &internalID
 		}
-		break
 	}
 
 	if s.registry != nil && g.getValue() != nil && g.getValue().IsValid() {
@@ -163,7 +159,6 @@ func (s *storeImpl) delete(g graph) ([]graph, []graph) {
 			delete(s.nodes, node.getID())
 			deletedGraphs = append(deletedGraphs, node)
 		}
-		break
 	case typeOfPrivateRelationship:
 		relationship := s.relationships[g.getID()]
 		if relationship != nil {
@@ -178,7 +173,6 @@ func (s *storeImpl) delete(g graph) ([]graph, []graph) {
 			updatedGraphs = append(updatedGraphs, relationship.getRelatedGraphs()[startNode], relationship.getRelatedGraphs()[endNode])
 			deletedGraphs = append(deletedGraphs, relationship)
 		}
-		break
 	}
 
 	if s.registry != nil && g.getValue() != nil && g.getValue().IsValid() {

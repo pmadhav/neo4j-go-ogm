@@ -144,7 +144,7 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 			return err
 		}
 		for _, record := range records {
-			graphs[0].setID(record.GetByIndex(0).(int64))
+			graphs[0].setID(record.Values[0].(int64))
 			deletedGraphs, updatedGraphs := d.store.delete(graphs[0])
 			for _, updatedGraph := range updatedGraphs {
 				notifyPostDelete(d.eventer, updatedGraph, UPDATE)

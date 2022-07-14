@@ -59,7 +59,7 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 	}
 
 	if saveOptions.Depth > maxDepth {
-		return errors.New("Cannot save greater than max depth")
+		return errors.New("cannot save greater than max depth")
 	}
 
 	if graphs, err = s.graphFactory.get(reflect.ValueOf(object), nil); err != nil {

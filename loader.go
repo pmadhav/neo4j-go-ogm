@@ -247,8 +247,8 @@ func (l *loader) loadAllOfGraphType(refGraph graph, IDs interface{}, loadOptions
 	relatedValues[typeOfPrivateRelationship] = map[int64]map[int64]bool{}
 
 	for _, record := range records {
-		refGraph.setID(record.GetByIndex(1).(int64))
-		toUnLoad.save(l.getGraphToLoadFromDBResult(record.GetByIndex(0).(neo4j.Path), record.GetByIndex(2).([]interface{}), refGraph, visitedGraphs, loadOptions.Depth))
+		refGraph.setID(record.Values[1].(int64))
+		toUnLoad.save(l.getGraphToLoadFromDBResult(record.Values[0].(neo4j.Path), record.Values[2].([]interface{}), refGraph, visitedGraphs, loadOptions.Depth))
 	}
 
 	for _, g := range toUnLoad.all() {

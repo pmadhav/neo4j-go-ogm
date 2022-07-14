@@ -84,10 +84,10 @@ type LogLevel int
 
 const (
 	NONE    LogLevel = 0
-	ERROR            = 1
-	WARNING          = 2
-	INFO             = 3
-	DEBUG            = 4
+	ERROR   LogLevel = 1
+	WARNING LogLevel = 2
+	INFO    LogLevel = 3
+	DEBUG   LogLevel = 4
 )
 
 var logLevels = map[LogLevel]neo4j.LogLevel{

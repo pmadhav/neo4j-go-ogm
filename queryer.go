@@ -175,7 +175,7 @@ func (q *queryer) query(cypher string, parameters map[string]interface{}, object
 					return nil, errors.New(fmt.Sprint("Not found: Runtime object for Node with id:", neo4jNode.Id, " and label:", strings.Join(neo4jNode.Labels, labelsDelim)))
 				}
 				columns[key] = g.getValue().Interface()
-			} else if neo4jRelationship, isNeo4jRelationship := record.Values[index].(neo4j.Relationship); isNeo4jRelationship == true {
+			} else if neo4jRelationship, isNeo4jRelationship := record.Values[index].(neo4j.Relationship); isNeo4jRelationship {
 
 				//find relationship struct and add it
 				var g graph
@@ -223,10 +223,10 @@ func (q *queryer) getObjectsFromRecords(domainObjectType reflect.Type, metadata 
 		column0 := record.Values[0]
 		newPtrToDomainObject := reflect.New(domainObjectType.Elem())
 
-		if neo4jNode, isNeo4jNode := column0.(neo4j.Node); isNeo4jNode == true {
+		if neo4jNode, isNeo4jNode := column0.(neo4j.Node); isNeo4jNode {
 
 			if internalGraphEntityType != typeOfPrivateNode {
-				return invalidValue, errors.New("Expecting a Relationship, but got a Node from the query response")
+				return invalidValue, errors.New("expecting a Relationship, but got a Node from the query response")
 			}
 			nodeMetadata := metadata.(*nodeMetadata)
 			labels := neo4jNode.Labels
@@ -240,9 +240,9 @@ func (q *queryer) getObjectsFromRecords(domainObjectType reflect.Type, metadata 
 			entityLabel = nodeMetadata.filterStructLabel(g)
 		}
 
-		if neo4jRelationship, isNeo4jReleationship := column0.(neo4j.Relationship); isNeo4jReleationship == true {
+		if neo4jRelationship, isNeo4jRelationship := column0.(neo4j.Relationship); isNeo4jRelationship {
 			if internalGraphEntityType != typeOfPrivateRelationship {
-				return invalidValue, errors.New("Unexpected graph type. Expecting a Node, but got a Relationship from the query response")
+				return invalidValue, errors.New("unexpected graph type. Expecting a Node, but got a Relationship from the query response")
 			}
 			g = &relationship{
 				ID:         neo4jRelationship.Id,
