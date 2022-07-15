@@ -39,13 +39,13 @@ func newTransactioner(accessMode neo4j.AccessMode) *transactioner {
 	return &transactioner{accessMode: accessMode}
 }
 
-func (t *transactioner) beginTransaction(s *sessionImpl) (*transaction, error) {
+func (t *transactioner) beginTransaction(s *sessionImpl, dbName string) (*transaction, error) {
 	if t.transaction != nil {
 		return nil, errors.New("transaction already exists")
 	}
 
 	var err error
-	if t.transaction, err = newTransaction(s.driver, t.endTransaction(s), t.accessMode); err != nil {
+	if t.transaction, err = newTransaction(s.driver, t.endTransaction(s), t.accessMode, dbName); err != nil {
 		return nil, err
 	}
 

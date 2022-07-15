@@ -64,7 +64,7 @@ func (l *loader) load(object interface{}, ID interface{}, loadOptions *LoadOptio
 	}
 
 	if loadOptions == nil {
-		loadOptions = NewLoadOptions()
+		loadOptions = NewLoadOptions("")
 	}
 	dummyValue := reflect.New(elem(reflect.TypeOf(object)).Elem())
 	graphs[0].setValue(&dummyValue)
@@ -97,7 +97,7 @@ func (l *loader) loadAll(objects interface{}, IDs interface{}, loadOptions *Load
 	}
 
 	if loadOptions == nil {
-		loadOptions = NewLoadOptions()
+		loadOptions = NewLoadOptions("")
 	}
 
 	dummyValue := reflect.New(elem(reflect.TypeOf(objects)).Elem())
@@ -112,7 +112,7 @@ func (l *loader) loadAll(objects interface{}, IDs interface{}, loadOptions *Load
 	return nil
 }
 
-func (l *loader) reload(objects ...interface{}) error {
+func (l *loader) reload(lo *LoadOptions, objects ...interface{}) error {
 	var err error
 	var graphs []graph
 	var IDer = getIDer(nil, nil)
@@ -137,7 +137,10 @@ func (l *loader) reload(objects ...interface{}) error {
 			ID = customIDValue.Interface()
 		}
 
-		lo := NewLoadOptions()
+		if lo == nil {
+			lo = NewLoadOptions("")
+		}
+
 		if storedGraph.getDepth() != nil {
 			lo.Depth = *storedGraph.getDepth() / 2
 		}
@@ -180,7 +183,7 @@ func (l *loader) loadAllOfGraphType(refGraph graph, IDs interface{}, loadOptions
 	)
 
 	if loadOptions == nil {
-		loadOptions = NewLoadOptions()
+		loadOptions = NewLoadOptions("")
 	}
 
 	if err != nil {
@@ -235,7 +238,8 @@ func (l *loader) loadAllOfGraphType(refGraph graph, IDs interface{}, loadOptions
 		return invalidValue, nil, err
 	}
 
-	if records, err = l.cypherExecuter.collect(cypherBuilder.getLoadAll(ids, loadOptions)); err != nil {
+	cql, params := cypherBuilder.getLoadAll(ids, loadOptions)
+	if records, err = l.cypherExecuter.collect(loadOptions.DatabaseName, cql, params); err != nil {
 		return invalidValue, nil, err
 	}
 

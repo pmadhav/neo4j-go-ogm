@@ -26,19 +26,19 @@ package gogm
 type Session interface {
 	Load(object interface{}, ID interface{}, loadOptions *LoadOptions) error
 	LoadAll(objects interface{}, IDs interface{}, loadOptions *LoadOptions) error
-	Reload(objects ...interface{}) error
+	Reload(loadOptions *LoadOptions, objects ...interface{}) error
 	Save(objects interface{}, saveOptions *SaveOptions) error
-	Delete(object interface{}) error
+	Delete(object interface{}, deleteOptions *DeleteOptions) error
 	DeleteAll(object interface{}, deleteOptions *DeleteOptions) error
-	PurgeDatabase() error
+	PurgeDatabase(deleteOptions *DeleteOptions) error
 	Clear() error
-	BeginTransaction() (*transaction, error)
+	BeginTransaction(dbName string) (*transaction, error)
 	GetTransaction() *transaction
-	QueryForObject(object interface{}, cypher string, parameters map[string]interface{}) error
-	QueryForObjects(objects interface{}, cypher string, parameters map[string]interface{}) error
-	Query(cypher string, parameters map[string]interface{}, objects ...interface{}) ([]map[string]interface{}, error)
-	CountEntitiesOfType(object interface{}) (int64, error)
-	Count(cypher string, parameters map[string]interface{}) (int64, error)
+	QueryForObject(loadOptions *LoadOptions, object interface{}, cypher string, parameters map[string]interface{}) error
+	QueryForObjects(loadOptions *LoadOptions, objects interface{}, cypher string, parameters map[string]interface{}) error
+	Query(loadOptions *LoadOptions, cypher string, parameters map[string]interface{}, objects ...interface{}) ([]map[string]interface{}, error)
+	CountEntitiesOfType(loadOptions *LoadOptions, object interface{}) (int64, error)
+	Count(loadOptions *LoadOptions, cypher string, parameters map[string]interface{}) (int64, error)
 	RegisterEventListener(EventListener) error
 	DisposeEventListener(EventListener) error
 }

@@ -64,7 +64,7 @@ func (r *registry) get(t reflect.Type) (metadata, error) {
 		}
 		r.registered[reflect.TypeOf(m)][m.getStructLabel()] = m
 		for _, statement := range getCreateSchemaStatement(m) {
-			if _, err = r.cypherExecuter.exec(statement, nil, false, false); err != nil {
+			if _, err = r.cypherExecuter.exec("", statement, nil, false, false); err != nil {
 				return nil, err
 			}
 		}

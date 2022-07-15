@@ -95,7 +95,7 @@ func (c *cypherExecuter) execTransactionSingle(te transactionExecuter, cql strin
 	return record, nil
 }
 
-func (c *cypherExecuter) exec(cql string, params map[string]interface{}, single bool, collect bool) (interface{}, error) {
+func (c *cypherExecuter) exec(dbName string, cql string, params map[string]interface{}, single bool, collect bool) (interface{}, error) {
 	var (
 		result   interface{}
 		txResult neo4j.Result
@@ -115,10 +115,16 @@ func (c *cypherExecuter) exec(cql string, params map[string]interface{}, single 
 		return txResult, nil
 	}
 
-	if session, err = c.driver.Session(c.accessMode); err != nil {
-		return nil, err
+	sessionConfig := neo4j.SessionConfig{
+		AccessMode: c.accessMode,
 	}
 
+	if dbName != "" {
+		sessionConfig.DatabaseName = dbName
+	}
+
+	session = c.driver.NewSession(sessionConfig)
+	defer session.Close()
 	transactionMode := session.ReadTransaction
 	if c.accessMode == neo4j.AccessModeWrite {
 		transactionMode = session.WriteTransaction
@@ -134,13 +140,13 @@ func (c *cypherExecuter) exec(cql string, params map[string]interface{}, single 
 	return result, err
 }
 
-func (c *cypherExecuter) single(cql string, params map[string]interface{}) (*db.Record, error) {
-	record, err := c.exec(cql, params, true, false)
+func (c *cypherExecuter) single(dbName string, cql string, params map[string]interface{}) (*db.Record, error) {
+	record, err := c.exec(dbName, cql, params, true, false)
 	return record.(*db.Record), err
 }
 
-func (c *cypherExecuter) collect(cql string, params map[string]interface{}) ([]*db.Record, error) {
-	record, err := c.exec(cql, params, false, true)
+func (c *cypherExecuter) collect(dbName string, cql string, params map[string]interface{}) ([]*db.Record, error) {
+	record, err := c.exec(dbName, cql, params, false, true)
 	return record.([]*db.Record), err
 }
 

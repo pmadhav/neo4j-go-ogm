@@ -145,7 +145,8 @@ func (s *saver) persist(graphs []graph, saveOptions *SaveOptions) ([]int, *neo4j
 		grandDeletedGraphs = map[string]graph{}
 		saveClausesSlice   []clauses
 		savedDepths        []int
-		ensureID           = getIDer(&internalIDGenerator{initialGraphID}, s.store)
+		ensureID                  = getIDer(&internalIDGenerator{initialGraphID}, s.store)
+		dbName             string = ""
 	)
 
 	for index, graph := range graphs {
@@ -206,7 +207,10 @@ func (s *saver) persist(graphs []graph, saveOptions *SaveOptions) ([]int, *neo4j
 
 	if cypher != emptyString {
 		var records []*neo4j.Record
-		if records, err = s.cypherExecuter.collect(cypher, grandParams); err != nil {
+		if saveOptions != nil {
+			dbName = saveOptions.DatabaseName
+		}
+		if records, err = s.cypherExecuter.collect(dbName, cypher, grandParams); err != nil {
 			return savedDepths, nil, nil, nil, err
 		}
 		record = records[0]

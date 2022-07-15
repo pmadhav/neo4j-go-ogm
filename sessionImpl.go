@@ -48,25 +48,25 @@ func (s *sessionImpl) LoadAll(objects interface{}, IDs interface{}, loadOptions 
 	return s.loader.loadAll(objects, IDs, loadOptions)
 }
 
-func (s *sessionImpl) Reload(objects ...interface{}) error {
-	return s.loader.reload(objects...)
+func (s *sessionImpl) Reload(loadOptions *LoadOptions, objects ...interface{}) error {
+	return s.loader.reload(loadOptions, objects...)
 }
 
 func (s *sessionImpl) Save(objects interface{}, saveOptions *SaveOptions) error {
 	return s.saver.save(objects, saveOptions)
 }
 
-func (s *sessionImpl) Delete(object interface{}) error {
-	return s.deleter.delete(object)
+func (s *sessionImpl) Delete(object interface{}, deleteOptions *DeleteOptions) error {
+	return s.deleter.delete(object, deleteOptions)
 }
 
 func (s *sessionImpl) DeleteAll(objects interface{}, deleteOptions *DeleteOptions) error {
 	return s.deleter.deleteAll(objects, deleteOptions)
 }
 
-func (s *sessionImpl) PurgeDatabase() error {
+func (s *sessionImpl) PurgeDatabase(deleteOptions *DeleteOptions) error {
 	var err error
-	if err = s.deleter.purgeDatabase(); err != nil {
+	if err = s.deleter.purgeDatabase(deleteOptions); err != nil {
 		return err
 	}
 	return s.store.clear()
@@ -76,8 +76,8 @@ func (s *sessionImpl) Clear() error {
 	return s.store.clear()
 }
 
-func (s *sessionImpl) BeginTransaction() (*transaction, error) {
-	return s.transactioner.beginTransaction(s)
+func (s *sessionImpl) BeginTransaction(dbName string) (*transaction, error) {
+	return s.transactioner.beginTransaction(s, dbName)
 }
 
 func (s *sessionImpl) GetTransaction() *transaction {
@@ -92,8 +92,8 @@ func (s *sessionImpl) GetTransaction() *transaction {
 //
 //Post condition:
 //Polulated domain objects
-func (s *sessionImpl) QueryForObject(object interface{}, cypher string, parameters map[string]interface{}) error {
-	return s.queryer.queryForObject(object, cypher, parameters)
+func (s *sessionImpl) QueryForObject(loadOptions *LoadOptions, object interface{}, cypher string, parameters map[string]interface{}) error {
+	return s.queryer.queryForObject(loadOptions, object, cypher, parameters)
 }
 
 //Precondition:
@@ -104,20 +104,20 @@ func (s *sessionImpl) QueryForObject(object interface{}, cypher string, paramete
 //
 //Post condition:
 //Polulated domain objects
-func (s *sessionImpl) QueryForObjects(objects interface{}, cypher string, parameters map[string]interface{}) error {
-	return s.queryer.queryForObjects(objects, cypher, parameters)
+func (s *sessionImpl) QueryForObjects(loadOptions *LoadOptions, objects interface{}, cypher string, parameters map[string]interface{}) error {
+	return s.queryer.queryForObjects(loadOptions, objects, cypher, parameters)
 }
 
-func (s *sessionImpl) Query(cypher string, parameters map[string]interface{}, objects ...interface{}) ([]map[string]interface{}, error) {
-	return s.queryer.query(cypher, parameters, objects...)
+func (s *sessionImpl) Query(loadOptions *LoadOptions, cypher string, parameters map[string]interface{}, objects ...interface{}) ([]map[string]interface{}, error) {
+	return s.queryer.query(loadOptions, cypher, parameters, objects...)
 }
 
-func (s *sessionImpl) CountEntitiesOfType(object interface{}) (int64, error) {
-	return s.queryer.countEntitiesOfType(object)
+func (s *sessionImpl) CountEntitiesOfType(loadOptions *LoadOptions, object interface{}) (int64, error) {
+	return s.queryer.countEntitiesOfType(loadOptions, object)
 }
 
-func (s *sessionImpl) Count(cypher string, parameters map[string]interface{}) (int64, error) {
-	return s.queryer.count(cypher, parameters)
+func (s *sessionImpl) Count(loadOptions *LoadOptions, cypher string, parameters map[string]interface{}) (int64, error) {
+	return s.queryer.count(loadOptions, cypher, parameters)
 }
 
 func (s *sessionImpl) RegisterEventListener(eventListener EventListener) error {

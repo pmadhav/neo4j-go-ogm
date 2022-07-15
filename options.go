@@ -24,22 +24,26 @@ package gogm
 
 //LoadOptions represents options used for loading database objects
 type LoadOptions struct {
-	Depth int
+	Depth        int
+	DatabaseName string
 }
 
 //SaveOptions represents options used for saving database objects
 type SaveOptions struct {
-	Depth int
+	Depth        int
+	DatabaseName string
 }
 
 //DeleteOptions represents options used for saving database objects. Currently, not applicatble to this version of the OGM
 type DeleteOptions struct {
+	DatabaseName string
 }
 
 //NewLoadOptions creates LoadOptions with defaults
-func NewLoadOptions() *LoadOptions {
+func NewLoadOptions(dbName string) *LoadOptions {
 	lo := &LoadOptions{}
 	lo.Depth = 1
+	lo.DatabaseName = dbName
 	return lo
 }
 
@@ -48,4 +52,11 @@ func NewSaveOptions() *SaveOptions {
 	so := &SaveOptions{}
 	so.Depth = 0
 	return so
+}
+
+//NewLoadOptions creates LoadOptions with defaults
+func NewDeleteOptions(dbName string) *DeleteOptions {
+	lo := &DeleteOptions{}
+	lo.DatabaseName = dbName
+	return lo
 }

@@ -30,28 +30,37 @@ type transaction struct {
 	neo4jTransaction neo4j.Transaction
 	session          neo4j.Session
 	close            transactionEnder
+	dbName           string
 }
 
-func newTransaction(driver neo4j.Driver, transactionEnder transactionEnder, accessMode neo4j.AccessMode) (*transaction, error) {
+func newTransaction(driver neo4j.Driver, transactionEnder transactionEnder, accessMode neo4j.AccessMode, dbName string) (*transaction, error) {
 
 	var (
 		err     error
 		session neo4j.Session
 	)
 
-	if session, err = driver.Session(accessMode); err != nil {
-		return nil, err
+	sessionConfig := neo4j.SessionConfig{
+		AccessMode: accessMode,
 	}
+
+	if dbName != "" {
+		sessionConfig.DatabaseName = dbName
+	}
+
+	session = driver.NewSession(sessionConfig)
 
 	var neo4jtransaction neo4j.Transaction
 	if neo4jtransaction, err = session.BeginTransaction(); err != nil {
+		session.Close()
 		return nil, err
 	}
 
 	return &transaction{
 		neo4jTransaction: neo4jtransaction,
 		session:          session,
-		close:            transactionEnder}, nil
+		close:            transactionEnder,
+		dbName:           dbName}, nil
 }
 
 func (t *transaction) run(cql string, params map[string]interface{}) (neo4j.Result, error) {

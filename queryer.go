@@ -42,12 +42,13 @@ func newQueryer(cypherExecutor *cypherExecuter, graphFactory graphFactory, regis
 	return &queryer{cypherExecutor, graphFactory, registry}
 }
 
-func (q *queryer) queryForObject(object interface{}, cypher string, parameters map[string]interface{}) error {
+func (q *queryer) queryForObject(loadOptions *LoadOptions, object interface{}, cypher string, parameters map[string]interface{}) error {
 	var (
 		err      error
 		values   reflect.Value
 		metadata metadata
 		records  []*neo4j.Record
+		dbName   string = ""
 	)
 	//Object: **DomainObject
 	domainObjectType := reflect.TypeOf(object).Elem()
@@ -58,7 +59,10 @@ func (q *queryer) queryForObject(object interface{}, cypher string, parameters m
 	if label, err = metadata.getLabel(invalidValue); err != nil {
 		return err
 	}
-	if records, err = q.cypherExecuter.collect(cypher, parameters); err != nil {
+	if loadOptions != nil {
+		dbName = loadOptions.DatabaseName
+	}
+	if records, err = q.cypherExecuter.collect(dbName, cypher, parameters); err != nil {
 		return err
 	}
 
@@ -78,13 +82,14 @@ func (q *queryer) queryForObject(object interface{}, cypher string, parameters m
 
 }
 
-func (q *queryer) queryForObjects(objects interface{}, cypher string, parameters map[string]interface{}) error {
+func (q *queryer) queryForObjects(loadOptions *LoadOptions, objects interface{}, cypher string, parameters map[string]interface{}) error {
 
 	var (
 		err      error
 		records  []*neo4j.Record
 		values   reflect.Value
 		metadata metadata
+		dbName   string = ""
 	)
 	//Object type is *[]*<DomaoinObject>
 	domainObjectType := reflect.TypeOf(objects).Elem().Elem()
@@ -97,7 +102,11 @@ func (q *queryer) queryForObjects(objects interface{}, cypher string, parameters
 		return err
 	}
 
-	if records, err = q.cypherExecuter.collect(cypher, parameters); err != nil {
+	if loadOptions != nil {
+		dbName = loadOptions.DatabaseName
+	}
+
+	if records, err = q.cypherExecuter.collect(dbName, cypher, parameters); err != nil {
 		return err
 	}
 
@@ -108,8 +117,8 @@ func (q *queryer) queryForObjects(objects interface{}, cypher string, parameters
 	return nil
 }
 
-func (q *queryer) query(cypher string, parameters map[string]interface{}, objects ...interface{}) ([]map[string]interface{}, error) {
-
+func (q *queryer) query(loadOptions *LoadOptions, cypher string, parameters map[string]interface{}, objects ...interface{}) ([]map[string]interface{}, error) {
+	var dbName string = ""
 	//registry all objects
 	for _, object := range objects {
 		if _, err := q.registry.get(reflect.TypeOf(object).Elem()); err != nil {
@@ -117,7 +126,11 @@ func (q *queryer) query(cypher string, parameters map[string]interface{}, object
 		}
 	}
 
-	records, err := q.cypherExecuter.collect(cypher, parameters)
+	if loadOptions != nil {
+		dbName = loadOptions.DatabaseName
+	}
+
+	records, err := q.cypherExecuter.collect(dbName, cypher, parameters)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +279,7 @@ func (q *queryer) getObjectsFromRecords(domainObjectType reflect.Type, metadata 
 	return ptrToObjs.Elem(), nil
 }
 
-func (q *queryer) countEntitiesOfType(object interface{}) (int64, error) {
+func (q *queryer) countEntitiesOfType(loadOptions *LoadOptions, object interface{}) (int64, error) {
 
 	var (
 		value         = reflect.ValueOf(object)
@@ -277,6 +290,7 @@ func (q *queryer) countEntitiesOfType(object interface{}) (int64, error) {
 		cypher        string
 		parameters    map[string]interface{}
 		err           error
+		dbName        string = ""
 	)
 
 	//object: **DomainObject
@@ -290,7 +304,10 @@ func (q *queryer) countEntitiesOfType(object interface{}) (int64, error) {
 	cypher, parameters = cypherBuilder.getCountEntitiesOfType()
 
 	if cypher != emptyString {
-		if record, err = q.cypherExecuter.single(cypher, parameters); err != nil {
+		if loadOptions != nil {
+			dbName = loadOptions.DatabaseName
+		}
+		if record, err = q.cypherExecuter.single(dbName, cypher, parameters); err != nil {
 			return -1, err
 		}
 		if record != nil {
@@ -301,12 +318,16 @@ func (q *queryer) countEntitiesOfType(object interface{}) (int64, error) {
 	return count, nil
 }
 
-func (q *queryer) count(cypher string, parameters map[string]interface{}) (int64, error) {
+func (q *queryer) count(loadOptions *LoadOptions, cypher string, parameters map[string]interface{}) (int64, error) {
 	var (
 		record *neo4j.Record
 		err    error
+		dbName string = ""
 	)
-	if record, err = q.cypherExecuter.single(cypher, parameters); err != nil {
+	if loadOptions != nil {
+		dbName = loadOptions.DatabaseName
+	}
+	if record, err = q.cypherExecuter.single(dbName, cypher, parameters); err != nil {
 		return -1, err
 	}
 	return record.Values[0].(int64), nil

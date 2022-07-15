@@ -40,7 +40,7 @@ func newDeleter(cypherExecuter *cypherExecuter, store store, eventer eventer, re
 	return &deleter{cypherExecuter, store, eventer, registry, graphFactory}
 }
 
-func (d *deleter) delete(object interface{}) error {
+func (d *deleter) delete(object interface{}, deleteOptions *DeleteOptions) error {
 
 	var (
 		value              = reflect.ValueOf(object)
@@ -50,6 +50,7 @@ func (d *deleter) delete(object interface{}) error {
 		graphDeleteClauses = map[clause][]string{}
 		graphs             []graph
 		record             *neo4j.Record
+		dbName             string = ""
 	)
 
 	if graphs, err = d.graphFactory.get(value, map[int]bool{labels: true, relatedGraph: true}); err != nil {
@@ -104,7 +105,11 @@ func (d *deleter) delete(object interface{}) error {
 			}
 		}
 
-		if record, err = d.cypherExecuter.single(cypher, flattenParamters(parameters)); err != nil {
+		if deleteOptions != nil {
+			dbName = deleteOptions.DatabaseName
+		}
+
+		if record, err = d.cypherExecuter.single(dbName, cypher, flattenParamters(parameters)); err != nil {
 			return err
 		}
 		if record != nil {
@@ -127,6 +132,7 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 		graphs  []graph
 		err     error
 		records []*neo4j.Record
+		dbName  string = ""
 	)
 
 	if graphs, err = d.graphFactory.get(value, map[int]bool{labels: true}); err != nil {
@@ -140,7 +146,11 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 	cypher, parameter := cypherBuilder.getDeleteAll()
 
 	if cypher != emptyString {
-		if records, err = d.cypherExecuter.collect(cypher, parameter); err != nil {
+		if deleteOptions != nil {
+			dbName = deleteOptions.DatabaseName
+		}
+
+		if records, err = d.cypherExecuter.collect(dbName, cypher, parameter); err != nil {
 			return err
 		}
 		for _, record := range records {
@@ -158,14 +168,16 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 	return nil
 }
 
-func (d *deleter) purgeDatabase() error {
+func (d *deleter) purgeDatabase(deleteOptions *DeleteOptions) error {
 	var err error
-	var session neo4j.Session
-	if _, err = d.cypherExecuter.exec("MATCH (n) DETACH DELETE n", nil, false, false); err != nil {
-		return err
+	var dbName string = ""
+
+	if deleteOptions != nil {
+		dbName = deleteOptions.DatabaseName
 	}
-	if session != nil {
-		defer session.Close()
+
+	if _, err = d.cypherExecuter.exec(dbName, "MATCH (n) DETACH DELETE n", nil, false, false); err != nil {
+		return err
 	}
 	for _, deletedGraph := range d.store.purge() {
 		notifyPostDelete(d.eventer, deletedGraph, DELETE)
