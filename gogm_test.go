@@ -23,6 +23,7 @@
 package gogm_test
 
 import (
+	"math"
 	"sort"
 	"testing"
 	"time"
@@ -42,6 +43,8 @@ var config = &gogm.Config{
 	true,
 }
 
+var dbName string = ""
+
 var ogm = gogm.New(config)
 var session, _ = ogm.NewSession(true)
 
@@ -49,16 +52,20 @@ const deletedID int64 = -1
 
 var eventListener = &TestEventListener{}
 
+var loadOptions *gogm.LoadOptions = gogm.NewLoadOptions(dbName)
+var saveOptions *gogm.SaveOptions = gogm.NewSaveOptions(dbName, math.MaxInt32/2)
+var deleteOptions *gogm.DeleteOptions = gogm.NewDeleteOptions(dbName)
+
 //Context: when simple node object is saved
 //Spec: should have metadata properties updated
 func TestNodeSave(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//Context
 	simpleNode := &SimpleNode{}
-	g.Expect(session.Save(&simpleNode, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNode, saveOptions)).NotTo(HaveOccurred())
 
 	//Spec
 	g.Expect(simpleNode.CreatedAt).ToNot(BeZero())
@@ -66,7 +73,7 @@ func TestNodeSave(t *testing.T) {
 	g.Expect(simpleNode.UpdatedAt).To(BeZero())
 	g.Expect(*simpleNode.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
@@ -74,7 +81,7 @@ func TestNodeSave(t *testing.T) {
 //Spec:should have metadata properties updated
 func TestRelationshipSave(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//Context
@@ -84,7 +91,7 @@ func TestRelationshipSave(t *testing.T) {
 	simpleRelationship.N4 = n4
 	simpleRelationship.N5 = n5
 
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
 
 	//Spec
 	g.Expect(simpleRelationship.CreatedAt).ToNot(BeZero())
@@ -94,31 +101,31 @@ func TestRelationshipSave(t *testing.T) {
 	g.Expect(*n4.ID > -1).To(BeTrue())
 	g.Expect(*n5.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestNodeSaveWithoutUpdate(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//Context
 	simpleNode := &SimpleNode{}
-	g.Expect(session.Save(&simpleNode, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Save(&simpleNode, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNode, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNode, saveOptions)).NotTo(HaveOccurred())
 
 	//Spec
 	g.Expect(*simpleNode.ID > -1).To(BeTrue())
 	g.Expect(simpleNode.UpdatedAt).To(BeZero())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestRelationshipSaveWithoutUpdate(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//Context
@@ -127,8 +134,8 @@ func TestRelationshipSaveWithoutUpdate(t *testing.T) {
 	n4 := &Node4{}
 	simpleRelationship.N4 = n4
 	simpleRelationship.N5 = n5
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
 
 	//Spec
 	g.Expect(*simpleRelationship.ID > -1).To(BeTrue())
@@ -139,30 +146,30 @@ func TestRelationshipSaveWithoutUpdate(t *testing.T) {
 	g.Expect(n4.UpdatedAt).To(BeZero())
 	g.Expect(n5.UpdatedAt).To(BeZero())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestNodeSaveWithUpdate(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleNode := &SimpleNode{}
-	g.Expect(session.Save(&simpleNode, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNode, saveOptions)).NotTo(HaveOccurred())
 	simpleNode.Prop1 = "test Prop"
-	g.Expect(session.Save(&simpleNode, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNode, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(simpleNode.UpdatedAt).ToNot(BeZero())
 	g.Expect(*simpleNode.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestRelationshipSaveWithUpdate(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleRelationship1 := &SimpleRelationship{}
@@ -177,9 +184,9 @@ func TestRelationshipSaveWithUpdate(t *testing.T) {
 
 	simpleRelationships := []*SimpleRelationship{simpleRelationship1, simpleRelationship2}
 
-	g.Expect(session.Save(&simpleRelationships, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationships, saveOptions)).NotTo(HaveOccurred())
 	simpleRelationship1.Name = "test Prop"
-	g.Expect(session.Save(&simpleRelationship1, gogm.NewSaveOptions())).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship1, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(simpleRelationship1.UpdatedAt).ToNot(BeZero())
 	g.Expect(*simpleRelationship1.ID > -1).To(BeTrue())
@@ -187,20 +194,20 @@ func TestRelationshipSaveWithUpdate(t *testing.T) {
 	g.Expect(simpleRelationship2.UpdatedAt).To(BeZero())
 	g.Expect(*simpleRelationship2.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestSaveSliceOfNode(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleNode1 := SimpleNode{}
 	simpleNode2 := SimpleNode{}
 
 	simpleNodes := []*SimpleNode{&simpleNode1, &simpleNode2}
-	g.Expect(session.Save(&simpleNodes, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNodes, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(simpleNode1.CreatedAt).NotTo(BeZero())
 	g.Expect(simpleNode1.DeletedAt).To(BeZero())
@@ -211,13 +218,13 @@ func TestSaveSliceOfNode(t *testing.T) {
 	g.Expect(simpleNode2.UpdatedAt).To(BeZero())
 	g.Expect(*simpleNode2.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestSaveSliceOfRelationship(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleRelationship1 := SimpleRelationship{}
@@ -232,7 +239,7 @@ func TestSaveSliceOfRelationship(t *testing.T) {
 
 	simpleRelationships := []*SimpleRelationship{&simpleRelationship1, &simpleRelationship2}
 
-	g.Expect(session.Save(&simpleRelationships, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationships, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(simpleRelationship1.CreatedAt).NotTo(BeZero())
 	g.Expect(simpleRelationship1.DeletedAt).To(BeZero())
@@ -254,33 +261,33 @@ func TestSaveSliceOfRelationship(t *testing.T) {
 	g.Expect(n5.UpdatedAt).To(BeZero())
 	g.Expect(*n5.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestNodeDelete(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleNode := &SimpleNode{}
-	g.Expect(session.Save(&simpleNode, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Delete(&simpleNode, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNode, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Delete(&simpleNode, deleteOptions)).NotTo(HaveOccurred())
 	simpleNode.Prop1 = "test"
-	g.Expect(session.Save(&simpleNode, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleNode, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(simpleNode.CreatedAt).ToNot(BeZero())
 	g.Expect(*simpleNode.ID).To(Equal(deletedID), "Deleted node isn't re-saved")
 
 	g.Expect(simpleNode.DeletedAt).ToNot(BeZero())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestRelationshipDelete(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleRelationship := &SimpleRelationship{}
@@ -288,15 +295,15 @@ func TestRelationshipDelete(t *testing.T) {
 	n4 := &Node4{}
 	simpleRelationship.N4 = n4
 	simpleRelationship.N5 = n5
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Delete(&simpleRelationship, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Delete(&simpleRelationship, deleteOptions)).NotTo(HaveOccurred())
 	simpleRelationship.Name = "test"
 
 	g.Expect(*simpleRelationship.ID).To(Equal(deletedID), "Deleted relationship isn't re-saved")
 	g.Expect(*n4.ID > deletedID).To(BeTrue())
 	g.Expect(*n5.ID > deletedID).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
@@ -304,10 +311,10 @@ func TestRelationshipDelete(t *testing.T) {
 //Spec: Corresponding relationship should be removed
 func TestRemoveNode(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = -1
 
 	n3 := &Node3{}
@@ -316,12 +323,12 @@ func TestRemoveNode(t *testing.T) {
 
 	n4.Name = "N4"
 	n3.Name = "N3"
-	g.Expect(session.Save(&n4, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n4, saveOptions)).NotTo(HaveOccurred())
 	var loadedN4 *Node4
 	var loadedN3 *Node3
 
 	n4.N3 = nil
-	g.Expect(session.Save(&n4, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n4, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
@@ -333,13 +340,13 @@ func TestRemoveNode(t *testing.T) {
 	g.Expect(*loadedN4).To(Equal(*n4))
 	g.Expect(*loadedN3).To(Equal(*n3))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestDeleteRelationshipEndpoint(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleRelationship := &SimpleRelationship{}
@@ -353,8 +360,8 @@ func TestDeleteRelationshipEndpoint(t *testing.T) {
 	simpleRelationship.N4 = n4
 	simpleRelationship.N5 = n5
 
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Delete(&n4, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Delete(&n4, deleteOptions)).NotTo(HaveOccurred())
 
 	//Spec
 	g.Expect(n4.DeletedAt).NotTo(BeZero())
@@ -364,13 +371,13 @@ func TestDeleteRelationshipEndpoint(t *testing.T) {
 	g.Expect(*n5.ID > -1).To(BeTrue())
 	g.Expect(*n3.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestDeleteRelationship(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleRelationship := &SimpleRelationship{}
@@ -384,8 +391,8 @@ func TestDeleteRelationship(t *testing.T) {
 	simpleRelationship.N4 = n4
 	simpleRelationship.N5 = n5
 
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Delete(&simpleRelationship, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Delete(&simpleRelationship, deleteOptions)).NotTo(HaveOccurred())
 
 	//Spec
 	g.Expect(n4.DeletedAt).To(BeZero())
@@ -398,13 +405,13 @@ func TestDeleteRelationship(t *testing.T) {
 	g.Expect(*n5.ID > -1).To(BeTrue())
 	g.Expect(*n3.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestDeleteAllNodes(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	n4_1 := &Node4{}
@@ -417,14 +424,14 @@ func TestDeleteAllNodes(t *testing.T) {
 	simpleRelationship.N4 = n4_5
 	simpleRelationship.N5 = n5
 	n4s := [4]*Node4{n4_1, n4_2, n4_3, n4_4}
-	g.Expect(session.Save(&n4s, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n4s, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
 
 	n4Ref := &Node4{}
-	countOfN4, err := session.CountEntitiesOfType(nil, &n4Ref)
+	countOfN4, err := session.CountEntitiesOfType(loadOptions, &n4Ref)
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(session.DeleteAll(&n4Ref, nil)).NotTo(HaveOccurred())
-	postDeleteCountOfN5, err := session.CountEntitiesOfType(nil, &n4Ref)
+	g.Expect(session.DeleteAll(&n4Ref, deleteOptions)).NotTo(HaveOccurred())
+	postDeleteCountOfN5, err := session.CountEntitiesOfType(loadOptions, &n4Ref)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(countOfN4).To(Equal(int64(5)))
@@ -436,13 +443,13 @@ func TestDeleteAllNodes(t *testing.T) {
 	g.Expect(simpleRelationship.DeletedAt).NotTo(BeZero(), "Deleting n4_5 should delete this related relationship")
 	g.Expect(*n5.ID > deletedID).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestDeleteAllRelationships(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleRelationship0 := &SimpleRelationship{}
@@ -459,14 +466,14 @@ func TestDeleteAllRelationships(t *testing.T) {
 	simpleRelationship1.N4 = n4_1
 	simpleRelationship1.N5 = n5_1
 
-	g.Expect(session.Save(&simpleRelationships, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationships, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	simpleRelationshipRef := &SimpleRelationship{}
-	countOfSimpleRelationships, err := session.CountEntitiesOfType(nil, &simpleRelationshipRef)
+	countOfSimpleRelationships, err := session.CountEntitiesOfType(loadOptions, &simpleRelationshipRef)
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(session.DeleteAll(&simpleRelationshipRef, nil)).NotTo(HaveOccurred())
-	countOfSimpleRelationshipsPostDelete, _ := session.CountEntitiesOfType(nil, &simpleRelationshipRef)
+	g.Expect(session.DeleteAll(&simpleRelationshipRef, deleteOptions)).NotTo(HaveOccurred())
+	countOfSimpleRelationshipsPostDelete, _ := session.CountEntitiesOfType(loadOptions, &simpleRelationshipRef)
 
 	g.Expect(countOfSimpleRelationships).To(Equal(int64(2)))
 	g.Expect(countOfSimpleRelationshipsPostDelete).To(BeZero())
@@ -476,13 +483,13 @@ func TestDeleteAllRelationships(t *testing.T) {
 	g.Expect(*n4_1.ID > -1).To(BeTrue())
 	g.Expect(*n5_1.ID > -1).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestSaveMultiSourceRelationship(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	theMatrix := &Movie{}
@@ -502,11 +509,11 @@ func TestSaveMultiSourceRelationship(t *testing.T) {
 	keanuReevesMatrixCharacter := &Character{Movie: theMatrix, Actor: keanu, Roles: []string{"Neo"}, Name: "keanuReevesMatrixCharacter"}
 
 	theMatrix.AddCharacter(carrieAnneMatrixCharacter)
-	g.Expect(session.Save(&keanuReevesMatrixCharacter, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&keanuReevesMatrixCharacter, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = -1
 	var loadedTheMatrix *Movie
 	g.Expect(session.Load(&loadedTheMatrix, *theMatrix.ID, lo)).NotTo(HaveOccurred())
@@ -519,13 +526,13 @@ func TestSaveMultiSourceRelationship(t *testing.T) {
 	g.Expect(*loadedTheMatrix.Characters[0].Actor.ID).To(Equal(*carrieAnne.ID))
 	g.Expect(*loadedTheMatrix.Characters[1].Actor.ID).To(Equal(*keanu.ID))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestLoadingSameNodeTypesNotNavigableInBothDir(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	jamesThompson := &Person{}
@@ -542,11 +549,11 @@ func TestLoadingSameNodeTypesNotNavigableInBothDir(t *testing.T) {
 
 	jessicaThompson.Follows = append(jessicaThompson.Follows, jamesThompson, angelaScope)
 
-	g.Expect(session.Save(&jessicaThompson, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&jessicaThompson, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 	var loadedJessicaThompson, loadedJamesThompson, loadedAngelaScope *Person
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = -1
 	g.Expect(session.Load(&loadedJessicaThompson, *jessicaThompson.ID, lo)).NotTo(HaveOccurred())
 	g.Expect(session.Load(&loadedJamesThompson, *jamesThompson.ID, lo)).NotTo(HaveOccurred())
@@ -563,13 +570,13 @@ func TestLoadingSameNodeTypesNotNavigableInBothDir(t *testing.T) {
 	g.Expect(len(loadedJamesThompson.Follows)).To(BeZero())
 	g.Expect(len(loadedAngelaScope.Follows)).To(BeZero())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestLoadingSameNodeTypesNavigableInBothDir(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	jamesThompson := &Person2{}
@@ -583,11 +590,11 @@ func TestLoadingSameNodeTypesNavigableInBothDir(t *testing.T) {
 
 	jessicaThompson.Follows = append(jessicaThompson.Follows, jamesThompson, angelaScope)
 
-	g.Expect(session.Save(&jessicaThompson, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&jessicaThompson, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 	var loadedJessicaThompson, loadedJamesThompson, loadedAngelaScope *Person2
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = -1
 	g.Expect(session.Load(&loadedJessicaThompson, *jessicaThompson.ID, lo)).NotTo(HaveOccurred())
 	g.Expect(session.Load(&loadedJamesThompson, *jamesThompson.ID, lo)).NotTo(HaveOccurred())
@@ -607,7 +614,7 @@ func TestLoadingSameNodeTypesNavigableInBothDir(t *testing.T) {
 	g.Expect(len(loadedAngelaScope.Follows)).To(Equal(1))
 	g.Expect(*loadedAngelaScope.Follows[0].ID).To(Equal(*loadedJessicaThompson.ID))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
@@ -615,7 +622,7 @@ func TestLoadingSameNodeTypesNavigableInBothDir(t *testing.T) {
 //Spec:should be able to log full path
 func TestFullPathSaveByOGMIsLoadable(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//(node0)-->(node1)-->(node2)<--(node3)-->(node4)
@@ -637,10 +644,10 @@ func TestFullPathSaveByOGMIsLoadable(t *testing.T) {
 	n3.N4 = n4
 
 	var loadedN0 *Node0
-	g.Expect(session.Save(&n0, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n0, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = -1
 	g.Expect(session.Load(&loadedN0, *n0.ID, lo)).NotTo(HaveOccurred())
 
@@ -655,7 +662,7 @@ func TestFullPathSaveByOGMIsLoadable(t *testing.T) {
 
 	g.Expect(*loadedN0.N1.N2.N3.N4.ID).To(Equal(*n4.ID))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
@@ -664,7 +671,7 @@ func TestFullPathSaveByOGMIsLoadable(t *testing.T) {
 func TestPathSaveByOGMIsLoadable(t *testing.T) {
 
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//(node0)-->(node1)-->(node2)<--(node3)-->(node4)
@@ -686,10 +693,10 @@ func TestPathSaveByOGMIsLoadable(t *testing.T) {
 	n3.N4 = n4
 
 	var loadedN0 *Node0
-	g.Expect(session.Save(&n0, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n0, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = 2
 	g.Expect(session.Load(&loadedN0, *n0.ID, lo)).NotTo(HaveOccurred())
 
@@ -702,7 +709,7 @@ func TestPathSaveByOGMIsLoadable(t *testing.T) {
 
 	g.Expect(loadedN0.N1.N2.N3).To(BeNil())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 }
@@ -710,7 +717,7 @@ func TestPathSaveByOGMIsLoadable(t *testing.T) {
 func TestLoadFromLocalStore(t *testing.T) {
 
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//(node0)-->(node1)-->(node2)<--(node3)-->(node4)
@@ -731,11 +738,11 @@ func TestLoadFromLocalStore(t *testing.T) {
 	n2.N3 = n3
 	n3.N4 = n4
 
-	g.Expect(session.Save(&n0, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n0, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	var loadedN1 *Node1
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = 2
 	g.Expect(session.Load(&loadedN1, *n1.ID, lo)).NotTo(HaveOccurred())
 
@@ -762,7 +769,7 @@ func TestLoadFromLocalStore(t *testing.T) {
 	g.Expect(session.Load(&loadedN1_1, *n1.ID, lo)).NotTo(HaveOccurred())
 	g.Expect(loadedN1_1.N2.N3.N4).ToNot(BeNil())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 }
@@ -770,7 +777,7 @@ func TestLoadFromLocalStore(t *testing.T) {
 func TestSaveToDepthFromNode(t *testing.T) {
 
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//(node0)-->(node1)-->(node2)<--(node3)-->(node4)
@@ -791,11 +798,10 @@ func TestSaveToDepthFromNode(t *testing.T) {
 	n2.N3 = n3
 	n3.N4 = n4
 
-	so := gogm.NewSaveOptions()
-	so.Depth = 0
+	so := gogm.NewSaveOptions(dbName, 0)
 	g.Expect(session.Save(&n0, so)).NotTo(HaveOccurred())
 
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = -1
 	var loadedN0 *Node0
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
@@ -832,13 +838,13 @@ func TestSaveToDepthFromNode(t *testing.T) {
 	g.Expect(loadedN0.N1.N2.Name).To(Equal(n0.N1.N2.Name))
 	g.Expect(loadedN0.N1.N2.N3.N4.Name).To(Equal(n4.Name))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestSaveToDepthFromRelationship(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//Context
@@ -856,13 +862,12 @@ func TestSaveToDepthFromRelationship(t *testing.T) {
 	n4.Name = "n4"
 	n5.Name = "n5"
 
-	so := gogm.NewSaveOptions()
-	so.Depth = 0
+	so := gogm.NewSaveOptions(dbName, 0)
 	g.Expect(session.Save(&simpleRelationship, so)).NotTo(HaveOccurred())
 
 	var loadedSimpleRelationship *SimpleRelationship
 
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = -1
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 	g.Expect(session.Load(&loadedSimpleRelationship, simpleRelationship.TestID, lo)).NotTo(HaveOccurred())
@@ -883,23 +888,23 @@ func TestSaveToDepthFromRelationship(t *testing.T) {
 		g.Expect(loadedSimpleRelationship.N5.N4.Name).To(Equal(n4.Name))
 	}
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestSaveNodeWithCustomID(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	n9 := &Node9{}
 	n9.TestId = "r"
-	g.Expect(session.Save(&n9, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n9, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	var loadedN9 *Node9
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = 2
 	g.Expect(session.Load(&loadedN9, n9.TestId, lo)).NotTo(HaveOccurred())
 	g.Expect(*loadedN9.ID).To(Equal(*n9.ID))
@@ -909,13 +914,13 @@ func TestSaveNodeWithCustomID(t *testing.T) {
 	g.Expect(session.Load(&loadedN9_1, loadedN9.TestId, lo)).NotTo(HaveOccurred())
 	g.Expect(loadedN9_1 == loadedN9).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestSaveRelationshipWithCustomID(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//Context
@@ -925,12 +930,12 @@ func TestSaveRelationshipWithCustomID(t *testing.T) {
 	n5 := &Node5{}
 	r.N4 = n4
 	r.N5 = n5
-	g.Expect(session.Save(&r, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&r, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	var loadedR *SimpleRelationship
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = 2
 	g.Expect(session.Load(&loadedR, r.TestID, lo)).NotTo(HaveOccurred())
 	g.Expect(*loadedR.ID).To(Equal(*r.ID))
@@ -940,13 +945,13 @@ func TestSaveRelationshipWithCustomID(t *testing.T) {
 	g.Expect(session.Load(&loadedR_1, loadedR.TestID, lo)).NotTo(HaveOccurred())
 	g.Expect(loadedR_1 == loadedR).To(BeTrue())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestTransactions(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	//(node0)-->(node1)-->(node2)<--(node3)-->(node4)
@@ -967,13 +972,12 @@ func TestTransactions(t *testing.T) {
 	n2.N3 = n3
 	n3.N4 = n4
 
-	so := gogm.NewSaveOptions()
-	so.Depth = 2
+	so := gogm.NewSaveOptions(dbName, 2)
 	g.Expect(session.Save(&n0, so)).NotTo(HaveOccurred())
 	g.Expect(n3.ID).To(BeNil())
 	g.Expect(n4.ID).To(BeNil())
 
-	tx, err := session.BeginTransaction("")
+	tx, err := session.BeginTransaction(dbName)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	n0.Name = "0Update"
@@ -986,7 +990,7 @@ func TestTransactions(t *testing.T) {
 	g.Expect(tx.Close()).NotTo(HaveOccurred())
 
 	var loadedN0 *Node0
-	lo := gogm.NewLoadOptions("")
+	lo := gogm.NewLoadOptions(dbName)
 	lo.Depth = 0
 	g.Expect(session.Load(&loadedN0, *n0.ID, lo)).NotTo(HaveOccurred())
 
@@ -994,7 +998,7 @@ func TestTransactions(t *testing.T) {
 	g.Expect(loadedN0.Name).To(Equal(n0.Name))
 	g.Expect(*loadedN0.N1.N2.N3.ID).To(Equal(*n3.ID), "Store cache still holds state of rolled back transcation")
 
-	g.Expect(session.Reload(nil, &n0)).NotTo(HaveOccurred(), "Reload to sycn runtime objects with backend")
+	g.Expect(session.Reload(loadOptions, &n0)).NotTo(HaveOccurred(), "Reload to sycn runtime objects with backend")
 	g.Expect(n0.Name).To(Equal("0"))
 	g.Expect(*n3.ID).To(Equal(deletedID), "n3 gets deleted as it was rolled back. n3 can't ever be saved again. Must create new instance to save")
 
@@ -1006,7 +1010,7 @@ func TestTransactions(t *testing.T) {
 	n3.N4 = n4
 	so.Depth = 3
 
-	tx, err = session.BeginTransaction("")
+	tx, err = session.BeginTransaction(dbName)
 	g.Expect(err).NotTo(HaveOccurred())
 	n0.Name = "0Update"
 	n2.Name = "2Update"
@@ -1014,18 +1018,18 @@ func TestTransactions(t *testing.T) {
 	g.Expect(tx.Commit()).NotTo(HaveOccurred())
 	g.Expect(tx.Close()).NotTo(HaveOccurred())
 
-	g.Expect(session.Reload(nil, &n0)).NotTo(HaveOccurred())
+	g.Expect(session.Reload(loadOptions, &n0)).NotTo(HaveOccurred())
 	g.Expect(n0.Name).To(Equal("0Update"))
 	g.Expect(n2.Name).To(Equal("2Update"))
 	g.Expect(*n3.ID).NotTo(Equal(deletedID))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestQuery_Nodes(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	jamesThompson := &Person{}
@@ -1042,10 +1046,10 @@ func TestQuery_Nodes(t *testing.T) {
 
 	jessicaThompson.Follows = append(jessicaThompson.Follows, jamesThompson, angelaScope)
 
-	g.Expect(session.Save(&jessicaThompson, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&jessicaThompson, saveOptions)).NotTo(HaveOccurred())
 
 	person := &Person{}
-	rows, err := session.Query(nil, "MATCH (person) RETURN person", nil, &person)
+	rows, err := session.Query(loadOptions, "MATCH (person) RETURN person", nil, &person)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(len(rows)).To(Equal(3))
 
@@ -1053,13 +1057,13 @@ func TestQuery_Nodes(t *testing.T) {
 		g.Expect(row["person"].(*Person).ID).NotTo(BeNil())
 	}
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestQuery_Node_Relationship(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 	simpleRelationship1 := SimpleRelationship{}
 	n5 := &Node5{}
@@ -1077,8 +1081,8 @@ func TestQuery_Node_Relationship(t *testing.T) {
 
 	simpleRelationships := []*SimpleRelationship{&simpleRelationship1, &simpleRelationship2, &simpleRelationship3}
 
-	g.Expect(session.Save(&simpleRelationships, nil)).NotTo(HaveOccurred())
-	rows, err := session.Query(nil, "MATCH (n5)-[r:SIMPLERELATIONSHIP]->(n4) RETURN n4, n5, r", nil)
+	g.Expect(session.Save(&simpleRelationships, saveOptions)).NotTo(HaveOccurred())
+	rows, err := session.Query(loadOptions, "MATCH (n5)-[r:SIMPLERELATIONSHIP]->(n4) RETURN n4, n5, r", nil)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(len(rows)).To(Equal(3))
 
@@ -1088,17 +1092,17 @@ func TestQuery_Node_Relationship(t *testing.T) {
 		g.Expect(row["r"].(*SimpleRelationship).ID).NotTo(BeNil())
 	}
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestQueryForObject_s(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	var person *Person
-	g.Expect(session.QueryForObject(nil, &person, "MATCH (person) RETURN person", nil)).NotTo(HaveOccurred())
+	g.Expect(session.QueryForObject(loadOptions, &person, "MATCH (person) RETURN person", nil)).NotTo(HaveOccurred())
 
 	g.Expect(person).To(BeNil())
 
@@ -1116,16 +1120,16 @@ func TestQueryForObject_s(t *testing.T) {
 
 	jessicaThompson.Follows = append(jessicaThompson.Follows, jamesThompson, angelaScope)
 
-	g.Expect(session.Save(&jessicaThompson, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&jessicaThompson, saveOptions)).NotTo(HaveOccurred())
 
-	g.Expect(session.QueryForObject(nil, &person, "MATCH (person:Person) RETURN person", nil)).To(HaveOccurred())
+	g.Expect(session.QueryForObject(loadOptions, &person, "MATCH (person:Person) RETURN person", nil)).To(HaveOccurred())
 	g.Expect(person).To(BeNil())
 
-	g.Expect(session.QueryForObject(nil, &person, "MATCH (person:Person) WHERE person.name = $name RETURN person", map[string]interface{}{"name": "Angela Scope"})).ToNot(HaveOccurred())
+	g.Expect(session.QueryForObject(loadOptions, &person, "MATCH (person:Person) WHERE person.name = $name RETURN person", map[string]interface{}{"name": "Angela Scope"})).ToNot(HaveOccurred())
 	g.Expect(person).To(Equal(angelaScope))
 
 	var persons []*Person
-	g.Expect(session.QueryForObjects(nil, &persons, "MATCH (person:Person) RETURN person", nil)).ToNot(HaveOccurred())
+	g.Expect(session.QueryForObjects(loadOptions, &persons, "MATCH (person:Person) RETURN person", nil)).ToNot(HaveOccurred())
 	g.Expect(len(persons)).To(Equal(3))
 
 	sort.SliceStable(persons, func(i, j int) bool { return persons[i].Name < persons[j].Name })
@@ -1136,16 +1140,16 @@ func TestQueryForObject_s(t *testing.T) {
 	jessicaThompson.Follows = nil
 	g.Expect(persons[2]).To(Equal(jessicaThompson))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestCount(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
-	count, err := session.Count(nil, "MATCH (n:INVALID) RETURN COUNT(n)", nil)
+	count, err := session.Count(loadOptions, "MATCH (n:INVALID) RETURN COUNT(n)", nil)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(count).To(BeZero())
 
@@ -1161,13 +1165,13 @@ func TestCount(t *testing.T) {
 
 	simpleRelationships := []*SimpleRelationship{&simpleRelationship1, &simpleRelationship2}
 
-	g.Expect(session.Save(&simpleRelationships, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationships, saveOptions)).NotTo(HaveOccurred())
 
-	count, err = session.Count(nil, "MATCH (n:Node4) RETURN COUNT(n)", nil)
+	count, err = session.Count(loadOptions, "MATCH (n:Node4) RETURN COUNT(n)", nil)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(count).To(Equal(int64(1)))
 
-	count, err = session.Count(nil, "MATCH (n:Node5) RETURN COUNT(n)", nil)
+	count, err = session.Count(loadOptions, "MATCH (n:Node5) RETURN COUNT(n)", nil)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(count).To(Equal(int64(1)))
 
@@ -1176,19 +1180,19 @@ func TestCount(t *testing.T) {
 	n4_3 := &Node4{}
 	n4_4 := &Node4{}
 	n4s := [4]*Node4{n4_1, n4_2, n4_3, n4_4}
-	g.Expect(session.Save(&n4s, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n4s, saveOptions)).NotTo(HaveOccurred())
 
-	count, err = session.Count(nil, "MATCH (n:Node4) RETURN COUNT(n)", nil)
+	count, err = session.Count(loadOptions, "MATCH (n:Node4) RETURN COUNT(n)", nil)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(count).To(Equal(int64(5)))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestLoadAll(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	simpleRelationship1 := SimpleRelationship{}
@@ -1207,23 +1211,23 @@ func TestLoadAll(t *testing.T) {
 	simpleRelationship1.TestID = "simpleRelationship1"
 	simpleRelationship2.TestID = "simpleRelationship2"
 
-	g.Expect(session.Save(&simpleRelationships, nil)).NotTo(HaveOccurred())
-	g.Expect(session.LoadAll(&loadContainter, nil, nil)).ToNot(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationships, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.LoadAll(&loadContainter, nil, loadOptions)).ToNot(HaveOccurred())
 
 	g.Expect(len(loadContainter)).To(Equal(2))
 
 	loadContainter = []*SimpleRelationship{}
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
-	g.Expect(session.LoadAll(&loadContainter, []string{simpleRelationship1.TestID}, nil)).ToNot(HaveOccurred())
+	g.Expect(session.LoadAll(&loadContainter, []string{simpleRelationship1.TestID}, loadOptions)).ToNot(HaveOccurred())
 	g.Expect(len(loadContainter)).To(Equal(1))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestMappedProperties(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	n0 := &Node0{}
@@ -1235,26 +1239,26 @@ func TestMappedProperties(t *testing.T) {
 	y := ",world"
 	n0.AliasedMapProps1 = map[string]*string{"hello": &e, "world": &y}
 
-	g.Expect(session.Save(&n0, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Save(&n0, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n0, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n0, saveOptions)).NotTo(HaveOccurred())
 
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	var loadedN0 *Node0
-	g.Expect(session.Load(&loadedN0, *n0.ID, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Load(&loadedN0, *n0.ID, loadOptions)).NotTo(HaveOccurred())
 
 	g.Expect(n0.UpdatedAt).To(BeZero())
 	g.Expect(loadedN0.MapProps).To(Equal(n0.MapProps))
 	g.Expect(loadedN0.InvalidIDMapProp).To(BeNil())
 	g.Expect(loadedN0.MapToInterfaces).To(Equal(n0.MapToInterfaces))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestSavingAndLoadingTime(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	n10 := &Node10{}
@@ -1266,50 +1270,50 @@ func TestSavingAndLoadingTime(t *testing.T) {
 	n10.Time1 = &tValue
 	n10.Duration = durationValue
 	n10.Duration1 = &durationValue
-	g.Expect(session.Save(&n10, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Save(&n10, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n10, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n10, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(n10.UpdatedAt).To(BeZero())
 
 	n10.Duration = neo4j.DurationOf(4, 3, 6, 7)
-	g.Expect(session.Save(&n10, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n10, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(n10.UpdatedAt).NotTo(BeZero())
 
 	var loadedN10 *Node10
-	g.Expect(session.Load(&loadedN10, *n10.ID, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Load(&loadedN10, *n10.ID, loadOptions)).NotTo(HaveOccurred())
 	n10.ClearMetaTimestamps()
 	g.Expect(loadedN10).To(Equal(n10))
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestByteProperty(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 	n0 := &Node0{}
 	n0.ByteProp = []byte("seafood")
-	g.Expect(session.Save(&n0, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n0, saveOptions)).NotTo(HaveOccurred())
 
 	//update
 	n0_1 := &Node0{}
 	n0_1.ID = n0.ID
 	n0_1.ByteProp = []byte("sea")
-	g.Expect(session.Save(&n0_1, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n0_1, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(n0_1.UpdatedAt).NotTo(BeZero())
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	var loadedN0 *Node0
-	g.Expect(session.Load(&loadedN0, *n0.ID, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Load(&loadedN0, *n0.ID, loadOptions)).NotTo(HaveOccurred())
 
 	n0_1.ClearMetaTimestamps()
 	g.Expect(loadedN0).To(Equal(n0_1))
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestRichRelationshipSameNodes(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	n51 := &Node5{}
@@ -1322,11 +1326,11 @@ func TestRichRelationshipSameNodes(t *testing.T) {
 	simpleRelationshipSameNode.N51 = n51
 	simpleRelationshipSameNode.N52 = n52
 
-	g.Expect(session.Save(&simpleRelationshipSameNode, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationshipSameNode, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	var loadedSimpleRelationshipSameNode *SimpleRelationshipSameNode
-	g.Expect(session.Load(&loadedSimpleRelationshipSameNode, *simpleRelationshipSameNode.ID, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Load(&loadedSimpleRelationshipSameNode, *simpleRelationshipSameNode.ID, loadOptions)).NotTo(HaveOccurred())
 
 	simpleRelationshipSameNode.ClearMetaTimestamps()
 	n51.ClearMetaTimestamps()
@@ -1335,13 +1339,13 @@ func TestRichRelationshipSameNodes(t *testing.T) {
 	g.Expect(loadedSimpleRelationshipSameNode.N51.Name).To(Equal("51"))
 	g.Expect(loadedSimpleRelationshipSameNode.N52.Name).To(Equal("52"))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestNodeEmbedRichRelationshipWithSameNodes(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	n51 := &Node5{}
@@ -1356,11 +1360,11 @@ func TestNodeEmbedRichRelationshipWithSameNodes(t *testing.T) {
 
 	n51.R2 = simpleRelationshipSameNode
 
-	g.Expect(session.Save(&n51, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n51, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(session.Clear()).NotTo(HaveOccurred())
 
 	var loadedN51 *Node5
-	g.Expect(session.Load(&loadedN51, *n51.ID, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Load(&loadedN51, *n51.ID, loadOptions)).NotTo(HaveOccurred())
 
 	simpleRelationshipSameNode.ClearMetaTimestamps()
 	n51.ClearMetaTimestamps()
@@ -1371,51 +1375,51 @@ func TestNodeEmbedRichRelationshipWithSameNodes(t *testing.T) {
 	g.Expect(n51.R2.N51.Name).To(Equal(loadedN51.R2.N51.Name))
 	g.Expect(n51.R2.N52.Name).To(Equal(loadedN51.R2.N52.Name))
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 //Error cases
 func TestSaveNodeWithInvalidCustomID(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	invalidID := &InvalidID{}
 	testID := "r"
 	invalidID.TestId = &testID
-	g.Expect(session.Save(invalidID, nil)).To(HaveOccurred())
+	g.Expect(session.Save(invalidID, saveOptions)).To(HaveOccurred())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestForbiddenLabel(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.RegisterEventListener(eventListener)).NotTo(HaveOccurred())
 
 	angelaScope := &Person{}
 	angelaScope.Name = "Angela Scope"
 	angelaScope.Tags = []string{"Angela"}
 
-	g.Expect(session.Save(&angelaScope, nil)).ToNot(HaveOccurred())
+	g.Expect(session.Save(&angelaScope, saveOptions)).ToNot(HaveOccurred())
 	g.Expect(angelaScope.UpdatedAt).To(BeZero())
 
 	angelaScope.Tags = []string{"Ana"}
-	g.Expect(session.Save(&angelaScope, nil)).ToNot(HaveOccurred())
+	g.Expect(session.Save(&angelaScope, saveOptions)).ToNot(HaveOccurred())
 	g.Expect(angelaScope.UpdatedAt).NotTo(BeZero())
 
 	angelaScope.Tags = []string{"Ana", "Person"}
-	g.Expect(session.Save(&angelaScope, nil)).To(HaveOccurred())
+	g.Expect(session.Save(&angelaScope, saveOptions)).To(HaveOccurred())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestQueryForObject_fail(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	jamesThompson := &Person{}
@@ -1432,28 +1436,28 @@ func TestQueryForObject_fail(t *testing.T) {
 
 	jessicaThompson.Follows = append(jessicaThompson.Follows, jamesThompson, angelaScope)
 
-	g.Expect(session.Save(&jessicaThompson, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&jessicaThompson, saveOptions)).NotTo(HaveOccurred())
 	session.Clear()
 	var loadedjessicaThompson *Person
-	g.Expect(session.Load(&loadedjessicaThompson, *jessicaThompson.ID, nil)).NotTo(HaveOccurred())
+	g.Expect(session.Load(&loadedjessicaThompson, *jessicaThompson.ID, loadOptions)).NotTo(HaveOccurred())
 
 	var relationships []*SimpleRelationship
-	g.Expect(session.QueryForObjects(nil, &relationships, "MATCH (person:Person) RETURN person", nil)).To(HaveOccurred())
+	g.Expect(session.QueryForObjects(loadOptions, &relationships, "MATCH (person:Person) RETURN person", nil)).To(HaveOccurred())
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }
 
 func TestMoreThanOneEntityWithSameLabel(t *testing.T) {
 	g := NewGomegaWithT(t)
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 
 	n1 := &Node1{}
 	n1Prime := &Node1Prime{}
 
-	g.Expect(session.Save(&n1, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Save(&n1Prime, nil)).To(HaveOccurred(), "Can't have  2 structs with the same labels")
+	g.Expect(session.Save(&n1, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&n1Prime, saveOptions)).To(HaveOccurred(), "Can't have  2 structs with the same labels")
 
 	simpleRelationship := &SimpleRelationship{}
 	n4 := &Node4{}
@@ -1464,9 +1468,9 @@ func TestMoreThanOneEntityWithSameLabel(t *testing.T) {
 	simpleRelationshipPrime := &SimpleRelationshipPrime{}
 	simpleRelationshipPrime.N4 = n4
 	simpleRelationshipPrime.N5 = n5
-	g.Expect(session.Save(&simpleRelationship, nil)).NotTo(HaveOccurred())
-	g.Expect(session.Save(&simpleRelationshipPrime, nil)).To(HaveOccurred(), "Can't have  2 structs with the same relaionship type")
+	g.Expect(session.Save(&simpleRelationship, saveOptions)).NotTo(HaveOccurred())
+	g.Expect(session.Save(&simpleRelationshipPrime, saveOptions)).To(HaveOccurred(), "Can't have  2 structs with the same relaionship type")
 
-	g.Expect(session.PurgeDatabase(nil)).NotTo(HaveOccurred())
+	g.Expect(session.PurgeDatabase(deleteOptions)).NotTo(HaveOccurred())
 	g.Expect(session.DisposeEventListener(eventListener)).NotTo(HaveOccurred())
 }

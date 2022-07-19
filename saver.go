@@ -54,8 +54,7 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 	)
 
 	if saveOptions == nil {
-		saveOptions = NewSaveOptions()
-		saveOptions.Depth = maxDepth
+		saveOptions = NewSaveOptions("", maxDepth)
 	}
 
 	if saveOptions.Depth > maxDepth {

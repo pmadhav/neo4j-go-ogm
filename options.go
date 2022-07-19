@@ -48,9 +48,10 @@ func NewLoadOptions(dbName string) *LoadOptions {
 }
 
 //NewSaveOptions creates SaveOptions with defaults
-func NewSaveOptions() *SaveOptions {
+func NewSaveOptions(dbName string, depth int) *SaveOptions {
 	so := &SaveOptions{}
-	so.Depth = 0
+	so.Depth = depth
+	so.DatabaseName = dbName
 	return so
 }
 
