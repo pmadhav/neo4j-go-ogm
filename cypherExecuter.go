@@ -83,7 +83,7 @@ func (c *cypherExecuter) execTransactionSingle(te transactionExecuter, cql strin
 		record interface{}
 	)
 
-	if _, err = te(func(tx neo4j.Transaction) (interface{}, error) {
+	if record, err = te(func(tx neo4j.Transaction) (interface{}, error) {
 		if result, err = tx.Run(cql, params); err != nil {
 			return nil, err
 		}
