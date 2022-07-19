@@ -1267,9 +1267,7 @@ func TestSavingAndLoadingTime(t *testing.T) {
 	durationValue := neo4j.DurationOf(2, 3, 6, 7)
 
 	n10.Time = tValue
-	n10.Time1 = &tValue
 	n10.Duration = durationValue
-	n10.Duration1 = &durationValue
 	g.Expect(session.Save(&n10, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(session.Save(&n10, saveOptions)).NotTo(HaveOccurred())
 	g.Expect(n10.UpdatedAt).To(BeZero())

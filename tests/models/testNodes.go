@@ -120,15 +120,15 @@ type Node9 struct {
 
 type Node10 struct {
 	TestNodeEntity
-	//ZeroTime     time.Time
-	NilTime1     *time.Time
+	ZeroTime time.Time
+	// NilTime1     *neo4j.Time
 	ZeroDuration neo4j.Duration
 
-	Time  time.Time
-	Time1 *time.Time
+	Time time.Time
+	// Time1 *time.Time
 
-	Duration  neo4j.Duration
-	Duration1 *neo4j.Duration
+	Duration neo4j.Duration
+	// Duration1 *neo4j.Duration
 }
 
 type InvalidID struct {
