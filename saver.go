@@ -61,7 +61,7 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 		return errors.New("cannot save greater than max depth")
 	}
 
-	if graphs, err = s.graphFactory.get(reflect.ValueOf(object), nil); err != nil {
+	if graphs, err = s.graphFactory.get(reflect.ValueOf(object), nil, saveOptions.DatabaseName); err != nil {
 		return err
 	}
 
@@ -87,7 +87,7 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 					delete(store.get(relatedGraph).getRelatedGraphs(), deletedGraphs[key].getID())
 					notifyPostSave(s.eventer, relatedGraph, UPDATE)
 				}
-				store.delete(deletedGraphs[key])
+				store.delete(deletedGraphs[key], saveOptions.DatabaseName)
 				notifyPostDelete(s.eventer, deletedGraphs[key], DELETE)
 			}
 		}
@@ -113,7 +113,7 @@ func (s *saver) save(object interface{}, saveOptions *SaveOptions) error {
 					if createdGraphSignatures[g.getSignature()] {
 						saveLifecycle = CREATE
 					}
-					store.save(g)
+					store.save(g, saveOptions.DatabaseName)
 					if g.getValue().IsValid() {
 						for _, eventListener := range s.eventer.eventListeners {
 							eventListener.OnPostSave(event{g.getValue(), saveLifecycle})
@@ -230,7 +230,12 @@ func (s *saver) getSaveMeta(g graph, saveOptions *SaveOptions, ensureID func(gra
 
 		savedDepth  = -1
 		depedencies []map[string]graph
+		dbName      string = ""
 	)
+
+	if saveOptions != nil {
+		dbName = saveOptions.DatabaseName
+	}
 
 	maxGraphDepth := maxDepth
 	if saveOptions.Depth > infiniteDepth {
@@ -243,24 +248,24 @@ func (s *saver) getSaveMeta(g graph, saveOptions *SaveOptions, ensureID func(gra
 
 	queue := []graph{g}
 
-	loadedGraphs.save(g)
+	loadedGraphs.save(g, dbName)
 
 	for len(queue) > 0 {
 
 		savedDepth = queue[0].getCoordinate().depth
 
-		if err = notifyPreSaveGraph(queue[0], s.eventer, s.registry); err != nil {
+		if err = notifyPreSaveGraph(queue[0], s.eventer, s.registry, dbName); err != nil {
 			return savedDepth, nil, nil, nil, nil, err
 		}
 
 		if reflect.TypeOf(queue[0]) == typeOfPrivateRelationship || queue[0].getCoordinate().depth+1 < maxGraphDepth {
-			if err := loadRelatedGraphs(queue[0], ensureID, s.registry, loadedGraphs, s.store); err != nil {
+			if err := loadRelatedGraphs(queue[0], ensureID, s.registry, loadedGraphs, s.store, dbName); err != nil {
 				return savedDepth, nil, nil, nil, nil, err
 			}
 		}
 
 		var cBuilder graphQueryBuilder
-		if cBuilder, err = newCypherBuilder(queue[0], s.registry, s.store); err != nil {
+		if cBuilder, err = newCypherBuilder(queue[0], s.registry, s.store, dbName); err != nil {
 			return savedDepth, nil, nil, nil, nil, err
 		}
 		if cBuilder.isGraphDirty() {
@@ -277,7 +282,7 @@ func (s *saver) getSaveMeta(g graph, saveOptions *SaveOptions, ensureID func(gra
 
 				depedencies = append(depedencies, createDeps)
 			} else {
-				match, matchParameters, matchDeps := cBuilder.getMatch()
+				match, matchParameters, matchDeps := cBuilder.getMatch(dbName)
 				parameters = append(parameters, matchParameters)
 				graphSaveClauses[matchClause] = append(graphSaveClauses[matchClause], match)
 
@@ -294,19 +299,19 @@ func (s *saver) getSaveMeta(g graph, saveOptions *SaveOptions, ensureID func(gra
 
 					otherNode := otherNodes[removedRelationship.getID()]
 					var removedCBuilder, otherGraphCBuilder graphQueryBuilder
-					if removedCBuilder, err = newCypherBuilder(removedRelationship, s.registry, nil); err != nil {
+					if removedCBuilder, err = newCypherBuilder(removedRelationship, s.registry, nil, dbName); err != nil {
 						return savedDepth, nil, nil, nil, nil, err
 					}
-					if otherGraphCBuilder, err = newCypherBuilder(otherNode, s.registry, nil); err != nil {
+					if otherGraphCBuilder, err = newCypherBuilder(otherNode, s.registry, nil, dbName); err != nil {
 						return savedDepth, nil, nil, nil, nil, err
 					}
 
-					match, matchParameters, matchDeps := removedCBuilder.getMatch()
+					match, matchParameters, matchDeps := removedCBuilder.getMatch(dbName)
 					parameters = append(parameters, matchParameters)
 					graphSaveClauses[matchClause] = append(graphSaveClauses[matchClause], match)
 					depedencies = append(depedencies, matchDeps)
 
-					match, matchParameters, matchDeps = otherGraphCBuilder.getMatch()
+					match, matchParameters, matchDeps = otherGraphCBuilder.getMatch(dbName)
 					parameters = append(parameters, matchParameters)
 					graphSaveClauses[matchClause] = append(graphSaveClauses[matchClause], match)
 					depedencies = append(depedencies, matchDeps)
@@ -337,7 +342,7 @@ func (s *saver) getSaveMeta(g graph, saveOptions *SaveOptions, ensureID func(gra
 	for _, dep := range depedencies {
 		for ID := range dep {
 			if savedGraphs[ID] == nil {
-				match, matchParameters, _ := gotten[ID].getMatch()
+				match, matchParameters, _ := gotten[ID].getMatch(dbName)
 				parameters = append(parameters, matchParameters)
 				graphSaveClauses[matchClause] = append(graphSaveClauses[matchClause], match)
 				savedGraphs[ID] = gotten[ID].getGraph()
@@ -348,17 +353,17 @@ func (s *saver) getSaveMeta(g graph, saveOptions *SaveOptions, ensureID func(gra
 	return savedDepth, graphSaveClauses, savedGraphs, deletedGraphs, flattenParamters(parameters), err
 }
 
-func loadRelatedGraphs(g graph, ID func(graph), registry *registry, loadedGraphs store, local store) error {
+func loadRelatedGraphs(g graph, ID func(graph), registry *registry, loadedGraphs store, local store, dbName string) error {
 	var (
 		err      error
 		metadata metadata
 	)
 	relatedGraphs := g.getRelatedGraphs()
 	if g.getValue().IsValid() {
-		if metadata, err = registry.get(g.getValue().Type()); err != nil {
+		if metadata, err = registry.get(g.getValue().Type(), dbName); err != nil {
 			return err
 		}
-		if relatedGraphs, err = metadata.loadRelatedGraphs(g, ID, registry); err != nil {
+		if relatedGraphs, err = metadata.loadRelatedGraphs(g, ID, registry, dbName); err != nil {
 			return err
 		}
 	}
@@ -367,7 +372,7 @@ func loadRelatedGraphs(g graph, ID func(graph), registry *registry, loadedGraphs
 		if loadedGraphs.get(relatedGraph) == nil {
 			cord := &coordinate{g.getCoordinate().depth + 1, g.getCoordinate().graphIndex}
 			relatedGraph.setCoordinate(cord)
-			loadedGraphs.save(relatedGraph)
+			loadedGraphs.save(relatedGraph, dbName)
 		}
 		g.setRelatedGraph(loadedGraphs.get(relatedGraph))
 	}

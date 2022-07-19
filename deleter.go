@@ -53,7 +53,11 @@ func (d *deleter) delete(object interface{}, deleteOptions *DeleteOptions) error
 		dbName             string = ""
 	)
 
-	if graphs, err = d.graphFactory.get(value, map[int]bool{labels: true, relatedGraph: true}); err != nil {
+	if deleteOptions != nil {
+		dbName = deleteOptions.DatabaseName
+	}
+
+	if graphs, err = d.graphFactory.get(value, map[int]bool{labels: true, relatedGraph: true}, dbName); err != nil {
 		return err
 	}
 
@@ -72,17 +76,17 @@ func (d *deleter) delete(object interface{}, deleteOptions *DeleteOptions) error
 	}
 
 	var cypherBuilder graphQueryBuilder
-	if cypherBuilder, err = newCypherBuilder(storedGraph, d.registry, nil); err != nil {
+	if cypherBuilder, err = newCypherBuilder(storedGraph, d.registry, nil, dbName); err != nil {
 		return err
 	}
-	delete, deleteParameters, depedencies := cypherBuilder.getDelete()
+	delete, deleteParameters, depedencies := cypherBuilder.getDelete(dbName)
 	for _, depedency := range depedencies {
 		var depedencyCypherBuilder graphQueryBuilder
-		if depedencyCypherBuilder, err = newCypherBuilder(depedency, d.registry, nil); err != nil {
+		if depedencyCypherBuilder, err = newCypherBuilder(depedency, d.registry, nil, dbName); err != nil {
 			return err
 		}
 
-		match, matchParameters, _ := depedencyCypherBuilder.getMatch()
+		match, matchParameters, _ := depedencyCypherBuilder.getMatch(dbName)
 		parameters = append(parameters, matchParameters)
 		graphDeleteClauses[matchClause] = append(graphDeleteClauses[matchClause], match)
 	}
@@ -104,16 +108,11 @@ func (d *deleter) delete(object interface{}, deleteOptions *DeleteOptions) error
 				}
 			}
 		}
-
-		if deleteOptions != nil {
-			dbName = deleteOptions.DatabaseName
-		}
-
 		if record, err = d.cypherExecuter.single(dbName, cypher, flattenParamters(parameters)); err != nil {
 			return err
 		}
 		if record != nil {
-			deletedGraphs, updatedGraphs := d.store.delete(storedGraph)
+			deletedGraphs, updatedGraphs := d.store.delete(storedGraph, dbName)
 			for _, updatedGraph := range updatedGraphs {
 				notifyPostDelete(d.eventer, updatedGraph, UPDATE)
 			}
@@ -135,27 +134,27 @@ func (d *deleter) deleteAll(object interface{}, deleteOptions *DeleteOptions) er
 		dbName  string = ""
 	)
 
-	if graphs, err = d.graphFactory.get(value, map[int]bool{labels: true}); err != nil {
+	if deleteOptions != nil {
+		dbName = deleteOptions.DatabaseName
+	}
+
+	if graphs, err = d.graphFactory.get(value, map[int]bool{labels: true}, dbName); err != nil {
 		return err
 	}
 
 	var cypherBuilder graphQueryBuilder
-	if cypherBuilder, err = newCypherBuilder(graphs[0], d.registry, nil); err != nil {
+	if cypherBuilder, err = newCypherBuilder(graphs[0], d.registry, nil, dbName); err != nil {
 		return err
 	}
 	cypher, parameter := cypherBuilder.getDeleteAll()
 
 	if cypher != emptyString {
-		if deleteOptions != nil {
-			dbName = deleteOptions.DatabaseName
-		}
-
 		if records, err = d.cypherExecuter.collect(dbName, cypher, parameter); err != nil {
 			return err
 		}
 		for _, record := range records {
 			graphs[0].setID(record.Values[0].(int64))
-			deletedGraphs, updatedGraphs := d.store.delete(graphs[0])
+			deletedGraphs, updatedGraphs := d.store.delete(graphs[0], dbName)
 			for _, updatedGraph := range updatedGraphs {
 				notifyPostDelete(d.eventer, updatedGraph, UPDATE)
 			}
@@ -179,7 +178,7 @@ func (d *deleter) purgeDatabase(deleteOptions *DeleteOptions) error {
 	if _, err = d.cypherExecuter.exec(dbName, "MATCH (n) DETACH DELETE n", nil, false, false); err != nil {
 		return err
 	}
-	for _, deletedGraph := range d.store.purge() {
+	for _, deletedGraph := range d.store.purge(dbName) {
 		notifyPostDelete(d.eventer, deletedGraph, DELETE)
 	}
 

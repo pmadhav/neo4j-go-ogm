@@ -65,12 +65,12 @@ func (nm *nodeMetadata) getLabel(v reflect.Value) (string, error) {
 	return strings.Join(runtimeLabels, labelsDelim), nil
 }
 
-func (nm *nodeMetadata) loadRelatedGraphs(g graph, ID func(graph), registry *registry) (map[int64]graph, error) {
+func (nm *nodeMetadata) loadRelatedGraphs(g graph, ID func(graph), registry *registry, dbName string) (map[int64]graph, error) {
 
 	relatedGraphs := map[int64]graph{}
 	value := *g.getValue()
-	relationshipAFieldExtractor := extractRelationshipTypeA(g.(*node), ID, registry)
-	relationshipBFieldExtractor := extractRelationshipTypeB(g.(*node), ID, registry)
+	relationshipAFieldExtractor := extractRelationshipTypeA(g.(*node), ID, registry, dbName)
+	relationshipBFieldExtractor := extractRelationshipTypeB(g.(*node), ID, registry, dbName)
 
 	for _, relationshipAStructField := range nm.relationshipAStructFields {
 		sf, _ := value.Elem().Type().FieldByName(relationshipAStructField.Name)
@@ -191,7 +191,7 @@ func (nm *nodeMetadata) blacklistLabels(labels []string) {
 	}
 }
 
-func extractRelationshipTypeA(n *node, ID func(graph), registry *registry) func(*field) ([]*relationship, error) {
+func extractRelationshipTypeA(n *node, ID func(graph), registry *registry, dbName string) func(*field) ([]*relationship, error) {
 	return func(f *field) ([]*relationship, error) {
 
 		var (
@@ -209,7 +209,7 @@ func extractRelationshipTypeA(n *node, ID func(graph), registry *registry) func(
 			var metadata metadata
 			var label string
 			var err error
-			if metadata, err = registry.get(values[i].Type()); err != nil {
+			if metadata, err = registry.get(values[i].Type(), dbName); err != nil {
 				return nil, err
 			}
 			if label, err = metadata.getLabel(values[i]); err != nil {
@@ -244,13 +244,13 @@ func extractRelationshipTypeA(n *node, ID func(graph), registry *registry) func(
 	}
 }
 
-func extractRelationshipTypeB(n *node, ID func(graph), registry *registry) func(*field) ([]*relationship, error) {
+func extractRelationshipTypeB(n *node, ID func(graph), registry *registry, dbName string) func(*field) ([]*relationship, error) {
 	return func(f *field) ([]*relationship, error) {
 		var (
 			metadata metadata
 			err      error
 		)
-		if metadata, err = registry.get(elem(f.getValue().Type())); err != nil {
+		if metadata, err = registry.get(elem(f.getValue().Type()), dbName); err != nil {
 			return nil, err
 		}
 
@@ -259,7 +259,7 @@ func extractRelationshipTypeB(n *node, ID func(graph), registry *registry) func(
 		for i := 0; i < len(values); i++ {
 			var label string
 			relationship := &relationship{ID: initialGraphID, Value: &values[i]}
-			if relationship.nodes, err = metadata.loadRelatedGraphs(relationship, ID, registry); err != nil {
+			if relationship.nodes, err = metadata.loadRelatedGraphs(relationship, ID, registry, dbName); err != nil {
 				return nil, err
 			}
 			if label, err = metadata.getLabel(values[i]); err != nil {

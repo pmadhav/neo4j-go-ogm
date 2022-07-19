@@ -17,13 +17,13 @@ func (nqb nodeQueryBuilder) getGraph() graph {
 	return nqb.n
 }
 
-func (nqb nodeQueryBuilder) getGraphField(relatedGraph graph) (*field, error) {
+func (nqb nodeQueryBuilder) getGraphField(relatedGraph graph, dbName string) (*field, error) {
 	var (
 		metadata metadata
 		field    *field
 		err      error
 	)
-	if metadata, err = nqb.registry.get(nqb.n.getValue().Type()); err != nil {
+	if metadata, err = nqb.registry.get(nqb.n.getValue().Type(), dbName); err != nil {
 		return nil, err
 	}
 	if field, err = metadata.getGraphField(nqb.n, relatedGraph); err != nil {
@@ -32,7 +32,7 @@ func (nqb nodeQueryBuilder) getGraphField(relatedGraph graph) (*field, error) {
 	return field, nil
 }
 
-func (nqb nodeQueryBuilder) diffNodeRelatedGraphs(ref graph) (addedGraphs map[int64]graph, removedGraphs map[int64]graph, _err error) {
+func (nqb nodeQueryBuilder) diffNodeRelatedGraphs(ref graph, dbName string) (addedGraphs map[int64]graph, removedGraphs map[int64]graph, _err error) {
 	if ref == nil {
 		return nil, nil, nil
 	}
@@ -47,7 +47,7 @@ func (nqb nodeQueryBuilder) diffNodeRelatedGraphs(ref graph) (addedGraphs map[in
 
 	for internalID, storedRelationship := range refNode.relationships {
 		if nqb.n.relationships[internalID] == nil {
-			if field, err = nqb.getGraphField(storedRelationship); err != nil {
+			if field, err = nqb.getGraphField(storedRelationship, dbName); err != nil {
 				return nil, nil, err
 			}
 
@@ -70,7 +70,7 @@ func (nqb nodeQueryBuilder) diffNodeRelatedGraphs(ref graph) (addedGraphs map[in
 	return removedRelationships, removedRelationshipsOtherNodes, nil
 }
 
-func newNodeCypherBuilder(n *node, registry *registry, stored graph) (*nodeQueryBuilder, error) {
+func newNodeCypherBuilder(n *node, registry *registry, stored graph, dbName string) (*nodeQueryBuilder, error) {
 
 	var err error
 	nqb := &nodeQueryBuilder{
@@ -82,7 +82,7 @@ func newNodeCypherBuilder(n *node, registry *registry, stored graph) (*nodeQuery
 	if stored != nil {
 		nqb.deltaProperties = diffProperties(n.getProperties(), stored.getProperties())
 		nqb.isLabelsDirty = n.getLabel() != stored.getLabel()
-		nqb.removedRelationships, nqb.removedRelationshipsOtherNodes, err = nqb.diffNodeRelatedGraphs(stored)
+		nqb.removedRelationships, nqb.removedRelationshipsOtherNodes, err = nqb.diffNodeRelatedGraphs(stored, dbName)
 		if err != nil {
 			return nil, err
 		}
@@ -105,10 +105,10 @@ func (nqb nodeQueryBuilder) getCreate() (string, string, map[string]interface{},
 	return create, emptyString, nil, nil
 }
 
-func (nqb nodeQueryBuilder) getMatch() (string, map[string]interface{}, map[string]graph) {
+func (nqb nodeQueryBuilder) getMatch(dbName string) (string, map[string]interface{}, map[string]graph) {
 	var (
 		nSign                                       = nqb.n.getSignature()
-		metadata, _                                 = nqb.registry.get(nqb.n.getValue().Type())
+		metadata, _                                 = nqb.registry.get(nqb.n.getValue().Type(), dbName)
 		customIDPropertyName, customIDPropertyValue = metadata.getCustomID(*nqb.n.getValue())
 		idCQLRef                                    = nSign + "ID"
 		parameters                                  = map[string]interface{}{idCQLRef: nqb.n.getID()}
@@ -158,7 +158,7 @@ func (nqb nodeQueryBuilder) getLoadAll(IDs interface{}, lo *LoadOptions) (string
 
 	var (
 		depth                   = strconv.Itoa(lo.Depth)
-		metadata, _             = nqb.registry.get(nqb.n.getValue().Type())
+		metadata, _             = nqb.registry.get(nqb.n.getValue().Type(), lo.DatabaseName)
 		customIDPropertyName, _ = metadata.getCustomID(*nqb.n.getValue())
 		parameters              = map[string]interface{}{}
 	)
@@ -187,8 +187,8 @@ func (nqb nodeQueryBuilder) getLoadAll(IDs interface{}, lo *LoadOptions) (string
 	return match + filter + end, parameters
 }
 
-func (nqb nodeQueryBuilder) getDelete() (string, map[string]interface{}, map[string]graph) {
-	match, parameters, _ := nqb.getMatch()
+func (nqb nodeQueryBuilder) getDelete(dbName string) (string, map[string]interface{}, map[string]graph) {
+	match, parameters, _ := nqb.getMatch(dbName)
 	delete := `DETACH DELETE ` + nqb.n.getSignature() + ` RETURN ID(` + nqb.n.getSignature() + `)
 	`
 	return match + delete, parameters, nil

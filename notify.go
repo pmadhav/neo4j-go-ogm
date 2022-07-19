@@ -22,7 +22,7 @@
 
 package gogm
 
-func notifyPreSaveGraph(g graph, eventer eventer, registry *registry) error {
+func notifyPreSaveGraph(g graph, eventer eventer, registry *registry, dbName string) error {
 
 	if g.getValue().IsValid() {
 		for _, eventListener := range eventer.eventListeners {
@@ -33,7 +33,7 @@ func notifyPreSaveGraph(g graph, eventer eventer, registry *registry) error {
 			metadata metadata
 			err      error
 		)
-		if metadata, err = registry.get(g.getValue().Type()); err != nil {
+		if metadata, err = registry.get(g.getValue().Type(), dbName); err != nil {
 			return err
 		}
 		var label string

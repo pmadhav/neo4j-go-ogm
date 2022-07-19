@@ -29,9 +29,9 @@ import (
 
 type graphQueryBuilder interface {
 	getCreate() (string, string, map[string]interface{}, map[string]graph)
-	getMatch() (string, map[string]interface{}, map[string]graph)
+	getMatch(dbName string) (string, map[string]interface{}, map[string]graph)
 	getSet() (string, map[string]interface{})
-	getDelete() (string, map[string]interface{}, map[string]graph)
+	getDelete(dbName string) (string, map[string]interface{}, map[string]graph)
 	getLoadAll(IDs interface{}, lo *LoadOptions) (string, map[string]interface{})
 	getDeleteAll() (string, map[string]interface{})
 	getCountEntitiesOfType() (string, map[string]interface{})
@@ -41,7 +41,7 @@ type graphQueryBuilder interface {
 	getRemovedGraphs() (map[int64]graph, map[int64]graph)
 }
 
-func newCypherBuilder(g graph, registry *registry, store store) (graphQueryBuilder, error) {
+func newCypherBuilder(g graph, registry *registry, store store, dbName string) (graphQueryBuilder, error) {
 	var (
 		qGraphBuilder graphQueryBuilder
 		stored        graph
@@ -52,11 +52,11 @@ func newCypherBuilder(g graph, registry *registry, store store) (graphQueryBuild
 	}
 	switch v := g.(type) {
 	case *node:
-		if qGraphBuilder, err = newNodeCypherBuilder(v, registry, stored); err != nil {
+		if qGraphBuilder, err = newNodeCypherBuilder(v, registry, stored, dbName); err != nil {
 			return nil, err
 		}
 	case *relationship:
-		qGraphBuilder = newRelationshipCypherBuilder(v, registry, stored)
+		qGraphBuilder = newRelationshipCypherBuilder(v, registry, stored, dbName)
 	}
 	return qGraphBuilder, nil
 }

@@ -39,7 +39,7 @@ func newRelationshipMetadata() *relationshipMetadata {
 		endpoints: map[int64]reflect.StructField{}}
 }
 
-func (rm *relationshipMetadata) loadRelatedGraphs(g graph, ID func(graph), registry *registry) (map[int64]graph, error) {
+func (rm *relationshipMetadata) loadRelatedGraphs(g graph, ID func(graph), registry *registry, dbName string) (map[int64]graph, error) {
 
 	if g.getValue().IsZero() || len(g.getRelatedGraphs()) == relationshipRelatedGraphLen {
 		return g.getRelatedGraphs(), nil
@@ -67,7 +67,7 @@ func (rm *relationshipMetadata) loadRelatedGraphs(g graph, ID func(graph), regis
 		metadata metadata
 		err      error
 	)
-	if metadata, err = registry.get(v1.Type()); err != nil {
+	if metadata, err = registry.get(v1.Type(), dbName); err != nil {
 		return nil, err
 	}
 	var label string
@@ -77,7 +77,7 @@ func (rm *relationshipMetadata) loadRelatedGraphs(g graph, ID func(graph), regis
 	relatedGraphs[startNode].setLabel(label)
 	relatedGraphs[startNode].setProperties(metadata.getProperties(v1))
 
-	if metadata, err = registry.get(v2.Type()); err != nil {
+	if metadata, err = registry.get(v2.Type(), dbName); err != nil {
 		return nil, err
 	}
 	if label, err = metadata.getLabel(v2); err != nil {

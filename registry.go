@@ -48,11 +48,11 @@ func newRegistry(cypherExecuter cypherExecuter) *registry {
 	return &registry{map[string]metadata{}, map[string][]metadata{}, registered, cypherExecuter, sync.Mutex{}}
 }
 
-func (r *registry) get(t reflect.Type) (metadata, error) {
+func (r *registry) get(t reflect.Type, dbName string) (metadata, error) {
 	var err error
 	m := r.getMetadata(t.String())
 	if m == nil {
-		if m, err = getMetadata(t, r); err != nil {
+		if m, err = getMetadata(t, r, dbName); err != nil {
 			return nil, err
 		}
 		r.setMetadata(t.String(), m)
@@ -64,7 +64,7 @@ func (r *registry) get(t reflect.Type) (metadata, error) {
 		}
 		r.registered[reflect.TypeOf(m)][m.getStructLabel()] = m
 		for _, statement := range getCreateSchemaStatement(m) {
-			if _, err = r.cypherExecuter.exec("", statement, nil, false, false); err != nil {
+			if _, err = r.cypherExecuter.exec(dbName, statement, nil, false, false); err != nil {
 				return nil, err
 			}
 		}

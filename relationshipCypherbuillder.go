@@ -30,13 +30,14 @@ type relationshipQueryBuilder struct {
 	r               *relationship
 	registry        *registry
 	deltaProperties map[string]interface{}
+	dbName          string
 }
 
 func (rqb relationshipQueryBuilder) getGraph() graph {
 	return rqb.r
 }
 
-func newRelationshipCypherBuilder(r *relationship, registry *registry, stored graph) relationshipQueryBuilder {
+func newRelationshipCypherBuilder(r *relationship, registry *registry, stored graph, dbName string) relationshipQueryBuilder {
 	deltaProperties := r.getProperties()
 	if stored != nil {
 		deltaProperties = diffProperties(deltaProperties, stored.getProperties())
@@ -44,7 +45,9 @@ func newRelationshipCypherBuilder(r *relationship, registry *registry, stored gr
 	return relationshipQueryBuilder{
 		r,
 		registry,
-		deltaProperties}
+		deltaProperties,
+		dbName,
+	}
 }
 
 func (rqb relationshipQueryBuilder) getRemovedGraphs() (map[int64]graph, map[int64]graph) {
@@ -67,7 +70,7 @@ func (rqb relationshipQueryBuilder) getCreate() (string, string, map[string]inte
 	return "", create, nil, map[string]graph{startSign: r.nodes[startNode], endSign: r.nodes[endNode]}
 }
 
-func (rqb relationshipQueryBuilder) getMatch() (string, map[string]interface{}, map[string]graph) {
+func (rqb relationshipQueryBuilder) getMatch(dbName string) (string, map[string]interface{}, map[string]graph) {
 	var (
 		r         = rqb.r
 		startSign = r.nodes[startNode].getSignature()
@@ -107,7 +110,7 @@ func (rqb relationshipQueryBuilder) getLoadAll(IDs interface{}, lo *LoadOptions)
 
 	var (
 		depth                   = strconv.Itoa(lo.Depth)
-		metadata, _             = rqb.registry.get(rqb.r.getValue().Type())
+		metadata, _             = rqb.registry.get(rqb.r.getValue().Type(), lo.DatabaseName)
 		customIDPropertyName, _ = metadata.getCustomID(*rqb.r.getValue())
 		parameters              = map[string]interface{}{}
 	)
@@ -144,9 +147,9 @@ func (rqb relationshipQueryBuilder) getDeleteAll() (string, map[string]interface
 	RETURN ID(r)`, nil
 }
 
-func (rqb relationshipQueryBuilder) getDelete() (string, map[string]interface{}, map[string]graph) {
+func (rqb relationshipQueryBuilder) getDelete(dbName string) (string, map[string]interface{}, map[string]graph) {
 	rSign := rqb.r.getSignature()
-	delete, _, depedencies := rqb.getMatch()
+	delete, _, depedencies := rqb.getMatch(dbName)
 	delete += `DELETE ` + rSign + ` RETURN ID(` + rSign + `)
 	`
 	return delete, nil, depedencies

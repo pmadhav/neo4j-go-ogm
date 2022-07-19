@@ -33,7 +33,7 @@ type metadata interface {
 	getLabel(reflect.Value) (string, error)
 	getProperties(reflect.Value) map[string]interface{}
 	getCustomID(reflect.Value) (string, reflect.Value)
-	loadRelatedGraphs(g graph, ID func(graph), registry *registry) (map[int64]graph, error)
+	loadRelatedGraphs(g graph, ID func(graph), registry *registry, dbName string) (map[int64]graph, error)
 	getGraphField(ref graph, relatedGraph graph) (*field, error)
 	getPropertyStructFields() map[string]*reflect.StructField
 	getStructLabel() string
@@ -87,7 +87,7 @@ func (c *commonMetadata) getProperties(v reflect.Value) map[string]interface{} {
 	return properties
 }
 
-func getMetadata(t reflect.Type, registry *registry) (metadata, error) {
+func getMetadata(t reflect.Type, registry *registry, dbName string) (metadata, error) {
 
 	var (
 		typeOfInternalGraph  reflect.Type
@@ -220,7 +220,7 @@ func getMetadata(t reflect.Type, registry *registry) (metadata, error) {
 			relationshipBStructField := relationshipFieldB.getStructField()
 			relationshipEntityType := elem(relationshipBStructField.Type)
 
-			if metadata, err = n.registry.get(relationshipEntityType); err != nil {
+			if metadata, err = n.registry.get(relationshipEntityType, dbName); err != nil {
 				return nil, err
 			}
 			rMetadata := metadata.(*relationshipMetadata)

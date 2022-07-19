@@ -50,17 +50,17 @@ func (q *queryer) queryForObject(loadOptions *LoadOptions, object interface{}, c
 		records  []*neo4j.Record
 		dbName   string = ""
 	)
+	if loadOptions != nil {
+		dbName = loadOptions.DatabaseName
+	}
 	//Object: **DomainObject
 	domainObjectType := reflect.TypeOf(object).Elem()
-	if metadata, err = q.registry.get(domainObjectType); err != nil {
+	if metadata, err = q.registry.get(domainObjectType, dbName); err != nil {
 		return err
 	}
 	var label string
 	if label, err = metadata.getLabel(invalidValue); err != nil {
 		return err
-	}
-	if loadOptions != nil {
-		dbName = loadOptions.DatabaseName
 	}
 	if records, err = q.cypherExecuter.collect(dbName, cypher, parameters); err != nil {
 		return err
@@ -79,7 +79,6 @@ func (q *queryer) queryForObject(loadOptions *LoadOptions, object interface{}, c
 	}
 
 	return nil
-
 }
 
 func (q *queryer) queryForObjects(loadOptions *LoadOptions, objects interface{}, cypher string, parameters map[string]interface{}) error {
@@ -91,19 +90,20 @@ func (q *queryer) queryForObjects(loadOptions *LoadOptions, objects interface{},
 		metadata metadata
 		dbName   string = ""
 	)
+
+	if loadOptions != nil {
+		dbName = loadOptions.DatabaseName
+	}
+
 	//Object type is *[]*<DomaoinObject>
 	domainObjectType := reflect.TypeOf(objects).Elem().Elem()
-	if metadata, err = q.registry.get(domainObjectType); err != nil {
+	if metadata, err = q.registry.get(domainObjectType, dbName); err != nil {
 		return err
 	}
 
 	var label string
 	if label, err = metadata.getLabel(invalidValue); err != nil {
 		return err
-	}
-
-	if loadOptions != nil {
-		dbName = loadOptions.DatabaseName
 	}
 
 	if records, err = q.cypherExecuter.collect(dbName, cypher, parameters); err != nil {
@@ -119,15 +119,15 @@ func (q *queryer) queryForObjects(loadOptions *LoadOptions, objects interface{},
 
 func (q *queryer) query(loadOptions *LoadOptions, cypher string, parameters map[string]interface{}, objects ...interface{}) ([]map[string]interface{}, error) {
 	var dbName string = ""
-	//registry all objects
-	for _, object := range objects {
-		if _, err := q.registry.get(reflect.TypeOf(object).Elem()); err != nil {
-			return nil, err
-		}
-	}
-
 	if loadOptions != nil {
 		dbName = loadOptions.DatabaseName
+	}
+
+	//registry all objects
+	for _, object := range objects {
+		if _, err := q.registry.get(reflect.TypeOf(object).Elem(), dbName); err != nil {
+			return nil, err
+		}
 	}
 
 	records, err := q.cypherExecuter.collect(dbName, cypher, parameters)
@@ -293,20 +293,21 @@ func (q *queryer) countEntitiesOfType(loadOptions *LoadOptions, object interface
 		dbName        string = ""
 	)
 
+	if loadOptions != nil {
+		dbName = loadOptions.DatabaseName
+	}
+
 	//object: **DomainObject
-	if graphs, err = q.graphFactory.get(reflect.New(value.Elem().Type()), map[int]bool{labels: true}); err != nil {
+	if graphs, err = q.graphFactory.get(reflect.New(value.Elem().Type()), map[int]bool{labels: true}, dbName); err != nil {
 		return -1, err
 	}
 
-	if cypherBuilder, err = newCypherBuilder(graphs[0], q.registry, nil); err != nil {
+	if cypherBuilder, err = newCypherBuilder(graphs[0], q.registry, nil, dbName); err != nil {
 		return -1, err
 	}
 	cypher, parameters = cypherBuilder.getCountEntitiesOfType()
 
 	if cypher != emptyString {
-		if loadOptions != nil {
-			dbName = loadOptions.DatabaseName
-		}
 		if record, err = q.cypherExecuter.single(dbName, cypher, parameters); err != nil {
 			return -1, err
 		}

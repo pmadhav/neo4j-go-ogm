@@ -35,14 +35,14 @@ func newGraphFactory(registry *registry) *graphFactory {
 		registry}
 }
 
-func (graphFactory graphFactory) get(v reflect.Value, settings map[int]bool) ([]graph, error) {
+func (graphFactory graphFactory) get(v reflect.Value, settings map[int]bool, dbName string) ([]graph, error) {
 
 	var metadata metadata
 	var graphs []graph
 	var domainObjectType = elem(v.Type())
 	var err error
 
-	if metadata, err = graphFactory.registry.get(domainObjectType); err != nil {
+	if metadata, err = graphFactory.registry.get(domainObjectType, dbName); err != nil {
 		return nil, err
 	}
 
@@ -92,7 +92,7 @@ func (graphFactory graphFactory) get(v reflect.Value, settings map[int]bool) ([]
 		for i := 0; i < len(values); i++ {
 			relationship := &relationship{ID: initialGraphID, Value: &values[i]}
 			if settings[relatedGraph] {
-				if relationship.nodes, err = metadata.loadRelatedGraphs(relationship, nil, graphFactory.registry); err != nil {
+				if relationship.nodes, err = metadata.loadRelatedGraphs(relationship, nil, graphFactory.registry, dbName); err != nil {
 					return nil, err
 				}
 			}

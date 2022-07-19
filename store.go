@@ -37,17 +37,17 @@ type store interface {
 	get(graph) graph
 
 	// save saves a graph in the store
-	save(graph)
+	save(graph, string)
 
 	// clear reset the store state
 	clear() error
 
 	// delete removes a graph from the store and returns graph that were deleted in the process
 	// and graphs that were affected by the delete (updatedGraphs)
-	delete(graph) (deletedGraphs []graph, updatedGraphs []graph)
+	delete(graph, string) (deletedGraphs []graph, updatedGraphs []graph)
 
 	// clears the store, but returns all deleted graphs
-	purge() []graph
+	purge(string) []graph
 
 	// node returns the node graph with ID
 	node(int64) graph
@@ -101,7 +101,7 @@ func (s *storeImpl) get(g graph) graph {
 	return storedGraph
 }
 
-func (s *storeImpl) save(g graph) {
+func (s *storeImpl) save(g graph, dbName string) {
 	switch t := reflect.TypeOf(g); t {
 	case typeOfPrivateNode:
 		s.nodesMu.Lock()
@@ -121,7 +121,7 @@ func (s *storeImpl) save(g graph) {
 
 	if s.registry != nil && g.getValue() != nil && g.getValue().IsValid() {
 		vType := g.getValue().Type()
-		metadata, _ := s.registry.get(vType)
+		metadata, _ := s.registry.get(vType, dbName)
 		customIDName, customIDValue := metadata.getCustomID(*g.getValue())
 		if customIDName != emptyString {
 			internalID := g.getID()
@@ -133,7 +133,7 @@ func (s *storeImpl) save(g graph) {
 	}
 }
 
-func (s *storeImpl) delete(g graph) ([]graph, []graph) {
+func (s *storeImpl) delete(g graph, dbName string) ([]graph, []graph) {
 	var deletedGraphs []graph
 	var updatedGraphs []graph
 	switch t := reflect.TypeOf(g); t {
@@ -141,7 +141,7 @@ func (s *storeImpl) delete(g graph) ([]graph, []graph) {
 		node := s.nodes[g.getID()]
 		if node != nil {
 			for _, relatedGraph := range node.getRelatedGraphs() {
-				relatedDeletedGraphs, relatedUpdatedGraphs := s.delete(relatedGraph)
+				relatedDeletedGraphs, relatedUpdatedGraphs := s.delete(relatedGraph, dbName)
 				if relatedUpdatedGraphs != nil {
 					if len(relatedUpdatedGraphs) == 2 {
 						if relatedUpdatedGraphs[0] == node {
@@ -177,7 +177,7 @@ func (s *storeImpl) delete(g graph) ([]graph, []graph) {
 
 	if s.registry != nil && g.getValue() != nil && g.getValue().IsValid() {
 		vType := g.getValue().Type()
-		metadata, _ := s.registry.get(vType)
+		metadata, _ := s.registry.get(vType, dbName)
 		customIDName, customIDValue := metadata.getCustomID(*g.getValue())
 		if customIDName != emptyString {
 			if s.customIDs[vType.String()] != nil && s.customIDs[vType.String()][customIDValue.Interface()] != nil {
@@ -197,10 +197,10 @@ func (s *storeImpl) clear() error {
 	return nil
 }
 
-func (s *storeImpl) purge() []graph {
+func (s *storeImpl) purge(dbName string) []graph {
 	var deletedGraphs []graph
 	for _, node := range s.nodes {
-		nodeDeletedGraphs, _ := s.delete(node)
+		nodeDeletedGraphs, _ := s.delete(node, dbName)
 		deletedGraphs = append(deletedGraphs, nodeDeletedGraphs...)
 	}
 	return deletedGraphs
@@ -238,7 +238,7 @@ func (s *storeImpl) getByCustomID(v reflect.Value, typeOfRefGraph reflect.Type, 
 	return nil
 }
 
-func unwind(g graph, depth int) store {
+func unwind(g graph, depth int, dbName string) store {
 	visited := newstore(nil)
 	maxDepth := depth * 2
 	g.setCoordinate(&coordinate{0, 0})
@@ -247,7 +247,7 @@ func unwind(g graph, depth int) store {
 		if reflect.TypeOf(queue[0]) == typeOfPrivateRelationship && queue[0].getCoordinate().depth > maxDepth {
 			break
 		}
-		visited.save(queue[0])
+		visited.save(queue[0], dbName)
 		for _, relatedGraph := range queue[0].getRelatedGraphs() {
 			if visited.get(relatedGraph) == nil {
 				relatedGraph.setCoordinate(&coordinate{queue[0].getCoordinate().depth + 1, 0})
