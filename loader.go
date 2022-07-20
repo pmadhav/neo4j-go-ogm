@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j/dbtype"
 )
 
 type loader struct {
@@ -316,6 +317,16 @@ func (l *loader) loadAllOfGraphType(refGraph graph, IDs interface{}, loadOptions
 	return ptrToObjs.Elem(), toUnLoad, nil
 }
 
+func getNodesMap(nodes []dbtype.Node) map[int64]dbtype.Node {
+	tmpMap := make(map[int64]dbtype.Node)
+
+	for _, tmpNode := range nodes {
+		tmpMap[tmpNode.Id] = tmpNode
+	}
+
+	return tmpMap
+}
+
 func (l *loader) getGraphToLoadFromDBResult(path neo4j.Path, isDirectionInverted []interface{}, refGraph graph, visitedGraphs store, depth int, dbName string) graph {
 
 	nodes := path.Nodes
@@ -323,12 +334,22 @@ func (l *loader) getGraphToLoadFromDBResult(path neo4j.Path, isDirectionInverted
 	internalGraphType := reflect.TypeOf(refGraph)
 	graphToLoadType := refGraph.getValue().Type().Elem()
 	ID := refGraph.getID()
+	nodesMap := getNodesMap(nodes)
+	var from dbtype.Node
+	var to dbtype.Node
+	var rOk bool
 
 	graphToLoad := visitedGraphs.get(refGraph)
 
 	for index, neoRelationship := range relationships {
-		from := nodes[index]
-		to := nodes[index+1]
+		// from := nodes[index]
+		// to := nodes[index+1]
+		if from, rOk = nodesMap[neoRelationship.StartId]; !rOk {
+			panic("Could not find starting node of relationship")
+		}
+		if to, rOk = nodesMap[neoRelationship.EndId]; !rOk {
+			panic("Could not find ending node of relationship")
+		}
 
 		if visitedGraphs.relationship(neoRelationship.Id) == nil {
 
