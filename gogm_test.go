@@ -38,7 +38,7 @@ import (
 var config = &gogm.Config{
 	"bolt://localhost:7687",
 	"neo4j",
-	"Brown-Fox-The",
+	"Pass1234",
 	gogm.DEBUG,
 	true,
 }
