@@ -36,14 +36,14 @@ import (
 )
 
 var config = &gogm.Config{
-	"neo4j://35.222.199.103:7687",
+	"bolt://localhost:7687",
 	"neo4j",
 	"Brown-Fox-The",
 	gogm.DEBUG,
 	true,
 }
 
-var dbName string = "test"
+var dbName string = ""
 
 var ogm = gogm.New(config)
 var session, _ = ogm.NewSession(true)
