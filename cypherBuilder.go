@@ -93,7 +93,7 @@ func getCreateSchemaStatement(metadata metadata) []string {
 
 	for name := range unique {
 		for _, label := range objectMetadata.thisStructLabel {
-			statements = append(statements, `CREATE CONSTRAINT ON (a:`+label+`) ASSERT a.`+name+` IS UNIQUE`)
+			statements = append(statements, `CREATE CONSTRAINT IF NOT EXISTS ON (a:`+label+`) ASSERT a.`+name+` IS UNIQUE`)
 		}
 	}
 
